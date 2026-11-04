@@ -5,16 +5,5 @@
     android:allowBackup="false"
     android:label="AssetRipper"
     android:usesCleartextTraffic="true"
-    android:supportsRtl="true">
-    <activity
-      android:name="crc64aabbccddeeff.MainActivity"
-      android:configChanges="orientation|screenSize|keyboardHidden"
-      android:exported="true"
-      android:screenOrientation="unspecified">
-      <intent-filter>
-        <action android:name="android.intent.action.MAIN" />
-        <category android:name="android.intent.category.LAUNCHER" />
-      </intent-filter>
-    </activity>
-  </application>
+    android:supportsRtl="true" />
 </manifest>
