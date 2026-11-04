@@ -108,9 +108,7 @@ public sealed class MainActivity : Activity
         if (IsFinishing || IsDestroyed)
             return;
 
-        string message = Android.Text.Html.FromHtml(
-            $"<b>AssetRipper could not start.</b><br/><br/>{Android.Text.Html.Encode(exception.Message)}",
-            Android.Text.FromHtmlOptions.ModeLegacy).ToString() ?? "Unknown startup error.";
+        string message = exception.ToString();
 
         new AlertDialog.Builder(this)
             .SetTitle("Startup failed")
