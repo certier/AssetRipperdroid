@@ -309,13 +309,29 @@ public sealed class MainActivity : Activity
 
     private async Task<string> CopyDocumentToDirectoryAsync(Uri uri, string destination)
     {
-        string displayName = GetDisplayName(uri);
-        string target = Path.Combine(destination, Path.GetFileName(displayName));
+        string displayName = Path.GetFileName(GetDisplayName(uri));
+        string target = GetAvailablePath(destination, displayName);
         using Stream input = ContentResolver!.OpenInputStream(uri)
             ?? throw new IOException($"Unable to open selected document: {displayName}");
         await using FileStream output = File.Create(target);
         await input.CopyToAsync(output);
         return target;
+    }
+
+    private static string GetAvailablePath(string directory, string fileName)
+    {
+        string candidate = Path.Combine(directory, fileName);
+        if (!File.Exists(candidate) && !Directory.Exists(candidate))
+            return candidate;
+
+        string name = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+        for (int suffix = 2; ; suffix++)
+        {
+            candidate = Path.Combine(directory, $"{name} ({suffix}){extension}");
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+                return candidate;
+        }
     }
 
     private string GetDisplayName(Uri uri)
