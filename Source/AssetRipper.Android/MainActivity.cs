@@ -290,8 +290,18 @@ public sealed class MainActivity : Activity
 
     private void PersistUriPermission(Uri uri, ActivityFlags flags)
     {
-        int granted = (int)(flags & (ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission));
-        ContentResolver!.TakePersistableUriPermission(uri, (ActivityFlags)granted);
+        ActivityFlags granted = flags & (ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission);
+        if (granted == 0)
+            return;
+
+        try
+        {
+            ContentResolver!.TakePersistableUriPermission(uri, granted);
+        }
+        catch (global::Android.Content.PM.SecurityException exception)
+        {
+            global::Android.Util.Log.Warn("AssetRipper", $"Storage provider did not grant persistent access: {exception.Message}");
+        }
     }
 
     private async Task<string> CopyDocumentToDirectoryAsync(Uri uri, string destination)
