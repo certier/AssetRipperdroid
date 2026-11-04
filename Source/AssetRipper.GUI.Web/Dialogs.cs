@@ -8,21 +8,21 @@ internal static class Dialogs
 {
 	public static bool Supported => AndroidDialogBridge.Supported || NativeDialog.Supported;
 
-	internal static async Task<string[]?> OpenFiles()
+	internal static async Task<string[]?> SelectFilesAsync()
 	{
 		return AndroidDialogBridge.Supported
 			? await AndroidDialogBridge.PickFilesAsync()
 			: await OpenFileDialog.OpenFiles();
 	}
 
-	internal static async Task<string[]?> OpenFolders()
+	internal static async Task<string[]?> SelectFoldersAsync()
 	{
 		return AndroidDialogBridge.Supported
 			? await AndroidDialogBridge.PickFoldersAsync()
 			: await OpenFolderDialog.OpenFolders();
 	}
 
-	internal static async Task<string?> OpenFolder()
+	internal static async Task<string?> SelectFolderAsync()
 	{
 		if (AndroidDialogBridge.Supported)
 		{
@@ -37,7 +37,7 @@ internal static class Dialogs
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string[] paths = await Dialogs.OpenFiles() ?? [];
+			string[] paths = await Dialogs.SelectFilesAsync() ?? [];
 			await Results.Json(paths, AppJsonSerializerContext.Default.StringArray).ExecuteAsync(context);
 		}
 	}
@@ -47,7 +47,7 @@ internal static class Dialogs
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string[] paths = await Dialogs.OpenFolders() ?? [];
+			string[] paths = await Dialogs.SelectFoldersAsync() ?? [];
 			await Results.Json(paths, AppJsonSerializerContext.Default.StringArray).ExecuteAsync(context);
 		}
 	}
@@ -67,7 +67,7 @@ internal static class Dialogs
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string path = await Dialogs.OpenFolder() ?? "";
+			string path = await Dialogs.SelectFolderAsync() ?? "";
 			await Results.Json(path, AppJsonSerializerContext.Default.String).ExecuteAsync(context);
 		}
 	}
