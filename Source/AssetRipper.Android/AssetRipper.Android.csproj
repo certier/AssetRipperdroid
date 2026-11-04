@@ -17,10 +17,8 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.App.Runtime.linux-arm64" Version="10.0.14" GeneratePathProperty="true" PrivateAssets="all" />
-    <Content Include="$(PkgMicrosoft_AspNetCore_App_Runtime_linux_arm64)/runtimes/linux-arm64/lib/net10.0/*.dll">
-      <Link>%(Filename)%(Extension)</Link>
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
-    </Content>
+    <Reference Include="$(PkgMicrosoft_AspNetCore_App_Runtime_linux_arm64)/runtimes/linux-arm64/lib/net10.0/*.dll">
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 </Project>
