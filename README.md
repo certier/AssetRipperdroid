@@ -43,7 +43,7 @@ The current Android target is ARM64 only. The app's development version is `0.1.
 
 ### Maintainer release process
 
-Versioned Android pre-releases use tags named `android-v*` and the [Android Release workflow](.github/workflows/android-release.yml). Before creating a release tag, configure these repository or environment secrets:
+Versioned Android pre-releases use tags named `android-v*` and the [Android Release workflow](.github/workflows/android-release.yml). Before creating a release tag, configure the protected `android-release` environment with these secrets:
 
 - `ANDROID_KEYSTORE_BASE64`: base64-encoded release keystore
 - `ANDROID_KEYSTORE_PASSWORD`: keystore password
