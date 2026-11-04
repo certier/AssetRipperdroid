@@ -36,7 +36,7 @@ jobs:
         run: dotnet restore Source/AssetRipper.Android/AssetRipper.Android.csproj
 
       - name: Build Android APK
-        run: dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk -p:AndroidSupportedAbis=arm64-v8a
+        run: dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
