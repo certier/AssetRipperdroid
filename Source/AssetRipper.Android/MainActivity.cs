@@ -140,6 +140,7 @@ public sealed class MainActivity : Activity
                 intent = new Intent(Intent.ActionOpenDocument);
                 intent.AddCategory(Intent.CategoryOpenable);
                 intent.SetType("*/*");
+                intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantPersistableUriPermission);
                 intent.PutExtra(Intent.ExtraAllowMultiple, true);
             }
             else
