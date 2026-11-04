@@ -16,6 +16,31 @@ AssetRipper supports Unity versions from `3.5.0` to `6000.4.X`. However, support
 
 [Downloads](https://assetripper.com/download.html)
 
+## Android (early access)
+
+An Android host is being developed on top of the existing AssetRipper application. It keeps the original web interface and Unity asset-processing engine, with a native Android Activity providing the WebView and Android's Storage Access Framework for file selection and export.
+
+[Android build status](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Aandroid-port) · [Android implementation notes](docs/ANDROID_PORT.md)
+
+**Current build:** Android ARM64 Release APK packaging passes in CI. The latest successful build is available as the [AssetRipper Android APK workflow artifact](https://github.com/certier/AssetRipperdroid/actions/runs/41857230118). Download the artifact ZIP and extract the APK before installing it. Workflow artifacts expire after 14 days.
+
+**Important:** this is an engineering preview, not a supported release. The Android host currently bundles managed ASP.NET Core assemblies as a compatibility experiment. APK compilation does not prove that the server starts correctly on Android. Installation, startup, import, and export still need validation on an Android device. Do not use it as the only copy of important project data.
+
+### Build from source
+
+Requirements: .NET 10 SDK, the .NET Android workload, and an Android ARM64 device (Android 7.0 / API 24 or later).
+
+```sh
+dotnet workload install android
+dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
+  --configuration Release \
+  --framework net10.0-android \
+  --runtime android-arm64 \
+  -p:AndroidPackageFormat=apk
+```
+
+The current Android target is ARM64 only. Device testing and release signing are not yet complete. See [Android port status and known limitations](docs/ANDROID_PORT.md) before trying the build.
+
 ## Premium Edition
 
 There is a premium edition of AssetRipper. This edition includes additional [features and improvements](https://assetripper.com/premium/features/).
