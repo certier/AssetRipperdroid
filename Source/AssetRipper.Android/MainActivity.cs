@@ -386,7 +386,13 @@ public sealed class MainActivity : Activity
         if (exportTreeUri is null || string.IsNullOrWhiteSpace(exportedPath) || !Directory.Exists(exportedPath))
             return;
 
-        await CopyDirectoryToTreeAsync(exportedPath, exportTreeUri);
+        Uri selectedTree = exportTreeUri;
+        string rootDocumentId = DocumentsContract.GetTreeDocumentId(selectedTree)
+            ?? throw new IOException("Android storage provider returned no export folder identifier.");
+        Uri rootDocumentUri = DocumentsContract.BuildDocumentUriUsingTree(selectedTree, rootDocumentId)
+            ?? throw new IOException("Android storage provider returned an invalid export folder URI.");
+
+        await CopyDirectoryToTreeAsync(exportedPath, rootDocumentUri);
         exportTreeUri = null;
     }
 
