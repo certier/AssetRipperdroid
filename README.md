@@ -22,7 +22,7 @@ An Android host is being developed on top of the existing AssetRipper applicatio
 
 [Android build status](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Aandroid-port) · [Android implementation notes](docs/ANDROID_PORT.md)
 
-**Current build:** Android ARM64 Release APK packaging passes in CI. The latest successful build is available as the [AssetRipper Android APK workflow artifact](https://github.com/certier/AssetRipperdroid/actions/runs/41859858312). Download the artifact ZIP and extract the APK before installing it. Workflow artifacts expire after 14 days.
+**Current build:** Android ARM64 APK packaging passes in CI. The latest build is published by the [Android CI workflow](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Aandroid-port) as the `AssetRipper-Android-ARM64-Test-APK` artifact. Download the ZIP and install `com.assetripper.android-Signed.apk`. This APK uses GitHub Actions' debug signing key and is for installation testing only; it is not a distributable release. Workflow artifacts expire after 14 days.
 
 **Important:** this is an engineering preview, not a supported release. The Android host currently bundles managed ASP.NET Core assemblies as a compatibility experiment. APK compilation does not prove that the server starts correctly on Android. Installation, startup, import, and export still need validation on an Android device. Do not use it as the only copy of important project data.
 
