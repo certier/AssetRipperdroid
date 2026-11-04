@@ -63,7 +63,7 @@ dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
   -p:AndroidPackageFormat=apk
 ```
 
-The CI workflow is [`.github/workflows/android.yml`](../.github/workflows/android.yml). It publishes the installable `com.assetripper.android-Signed.apk` as the `AssetRipper-Android-ARM64-Test-APK` artifact. The APK is signed with the CI debug key for device testing only. It is not signed with the maintainer's release key and must not be distributed as a public release. Workflow artifacts are temporary and expire after the configured retention period.
+The CI workflow is [`.github/workflows/android.yml`](../.github/workflows/android.yml). It publishes the installable `com.assetripper.android-Signed.apk` as the `AssetRipper-Android-ARM64-Test-APK` artifact. The APK is signed with the CI debug key for device testing only. It is not signed with the maintainer's release key and must not be distributed as a public release. The CI debug key may change between runs; uninstall an older test build before installing a newer one. Uninstalling removes the app's private staging data. Workflow artifacts are temporary and expire after the configured retention period.
 
 ## Signed pre-release workflow
 
