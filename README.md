@@ -39,7 +39,20 @@ dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
   -p:AndroidPackageFormat=apk
 ```
 
-The current Android target is ARM64 only. Device testing and release signing are not yet complete. See [Android port status and known limitations](docs/ANDROID_PORT.md) before trying the build.
+The current Android target is ARM64 only. The app's development version is `0.1.0-alpha.1`. Device testing is not complete, so this build is not a supported public release.
+
+### Maintainer release process
+
+Versioned Android pre-releases use tags named `android-v*` and the [Android Release workflow](.github/workflows/android-release.yml). Before creating a release tag, configure these repository or environment secrets:
+
+- `ANDROID_KEYSTORE_BASE64`: base64-encoded release keystore
+- `ANDROID_KEYSTORE_PASSWORD`: keystore password
+- `ANDROID_KEY_ALIAS`: signing key alias
+- `ANDROID_KEY_PASSWORD`: signing key password
+
+The workflow fails before publishing if any signing secret is missing. It signs the ARM64 APK, generates a SHA-256 checksum, and creates a GitHub pre-release. Keep the keystore and passwords out of the repository. Do not create a release tag until the Android runtime and import/export smoke tests have passed.
+
+See [Android port status and known limitations](docs/ANDROID_PORT.md) before trying the build.
 
 ## Premium Edition
 
