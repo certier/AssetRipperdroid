@@ -272,6 +272,7 @@ public static class WebApplicationLauncher
 		//Dialogs
 		app.MapGet("/Dialogs/SaveFile", Dialogs.SaveFile.HandleGetRequest).Produces<string>();
 		app.MapGet("/Dialogs/OpenFolder", Dialogs.OpenFolder.HandleGetRequest).Produces<string>();
+		app.MapGet("/Dialogs/ExportFolder", Dialogs.ExportFolder.HandleGetRequest).Produces<string>();
 		app.MapGet("/Dialogs/OpenFolders", Dialogs.OpenFolders.HandleGetRequest).Produces<string>();
 		app.MapGet("/Dialogs/OpenFile", Dialogs.OpenFile.HandleGetRequest).Produces<string>();
 		app.MapGet("/Dialogs/OpenFiles", Dialogs.OpenFiles.HandleGetRequest).Produces<string>();
