@@ -1,5 +1,9 @@
 name: DocFX Build and Publish
 
+concurrency:
+  group: docfx-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   workflow_dispatch:
   push:
