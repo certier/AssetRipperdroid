@@ -105,10 +105,11 @@ public static class Commands
 
 			if (!string.IsNullOrEmpty(path))
 			{
+				string exportRoot = path;
 				bool createSubfolder = TryGetCreateSubfolder(form);
 				path = MaybeAppendTimestampedSubfolder(path, createSubfolder);
 				await GameFileLoader.ExportUnityProject(path);
-				await AndroidDialogBridge.CompleteExportAsync(path);
+				await AndroidDialogBridge.CompleteExportAsync(exportRoot);
 			}
 			return null;
 		}
@@ -132,10 +133,11 @@ public static class Commands
 
 			if (!string.IsNullOrEmpty(path))
 			{
+				string exportRoot = path;
 				bool createSubfolder = TryGetCreateSubfolder(form);
 				path = MaybeAppendTimestampedSubfolder(path, createSubfolder);
 				await GameFileLoader.ExportPrimaryContent(path);
-				await AndroidDialogBridge.CompleteExportAsync(path);
+				await AndroidDialogBridge.CompleteExportAsync(exportRoot);
 			}
 			return null;
 		}
