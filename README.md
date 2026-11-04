@@ -20,7 +20,7 @@ AssetRipper supports Unity versions from `3.5.0` to `6000.4.X`. However, support
 
 An Android host is being developed on top of the existing AssetRipper application. It keeps the original web interface and Unity asset-processing engine, with a native Android Activity providing the WebView and Android's Storage Access Framework for file selection and export.
 
-[Android build status](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Aandroid-port) · [Android implementation notes](docs/ANDROID_PORT.md)
+[Android build status](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Amaster) · [Android implementation notes](docs/ANDROID_PORT.md)
 
 **Current build:** Android ARM64 APK packaging passes in CI. The latest build is published by the [Android CI workflow](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Aandroid-port) as the `AssetRipper-Android-ARM64-Test-APK` artifact. Download the ZIP and install `com.assetripper.android-Signed.apk`. This APK uses GitHub Actions' debug signing key and is for installation testing only; it is not a distributable release. The CI debug key may change between runs, so uninstall an older test build before installing a newer one. Uninstalling clears the app's private staging data. Workflow artifacts expire after 14 days.
 
