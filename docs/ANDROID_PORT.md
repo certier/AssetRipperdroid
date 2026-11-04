@@ -12,9 +12,11 @@ The first Android host milestone adds:
 - a WebView host for the existing local web UI;
 - a loopback-only Kestrel endpoint on port 18555;
 - startup readiness polling and an on-screen startup error;
-- an Android APK CI workflow.
+- an Android ARM64 APK CI workflow.
+- an Android document-picker bridge: selected files and folders are copied from SAF content URIs into app-private staging paths before the existing importer sees them.
+- export staging plus recursive copy into a user-selected SAF document tree after the existing exporter completes.
 
-This is a host integration milestone, **not a completed Android port**. The referenced GUI project currently targets `net10.0` and uses the `Microsoft.AspNetCore.App` shared-framework reference. Android does not provide that shared framework automatically. The project reference therefore requires the ASP.NET Core runtime dependency migration described below before the APK can be considered buildable or runnable.
+This is an initial integration milestone, **not a completed Android port**. The SAF bridge is implemented but still requires successful CI compilation and physical-device testing. The referenced GUI project currently targets `net10.0` and uses the `Microsoft.AspNetCore.App` shared-framework reference. Android does not provide that shared framework automatically. The project reference therefore requires the ASP.NET Core runtime dependency migration described below before the APK can be considered buildable or runnable.
 
 ## Required next milestones
 
@@ -23,11 +25,10 @@ This is a host integration milestone, **not a completed Android port**. The refe
    - Verify Kestrel loopback hosting on physical ARM64 Android devices.
    - Keep the existing route handlers, page renderers, APIs, and static assets unchanged.
 
-2. **Storage Access Framework**
-   - Implement Android document and directory pickers.
-   - Import selected content URIs into app-private staging storage before passing ordinary paths to the existing importer.
-   - Export into app-private staging directories and copy results to user-selected document-tree destinations.
-   - Handle cancellation, duplicate names, insufficient storage, and interrupted transfers.
+2. **Storage Access Framework hardening**
+   - Test Android document and directory pickers on physical devices and multiple document providers.
+   - Harden cancellation, duplicate names, insufficient storage, provider errors, and interrupted transfers.
+   - Add export conflict handling and cleanup for abandoned staging directories.
 
 3. **Native dialog replacement**
    - Replace desktop native-dialog calls behind a platform abstraction.
