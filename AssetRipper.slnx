@@ -10,6 +10,7 @@
     <File Path="Source/generate.bat" />
   </Folder>
   <Folder Name="/Solution Items/Docs/">
+    <File Path="docs/ANDROID_PORT.md" />
     <File Path="docs/articles/CommonIssues.md" />
     <File Path="docs/articles/Credits.md" />
     <File Path="docs/articles/Downloads.md" />
@@ -54,6 +55,7 @@
   </Folder>
   <Folder Name="/Solution Items/Workflows/">
     <File Path=".github/dependabot.yml" />
+    <File Path=".github/workflows/android.yml" />
     <File Path=".github/workflows/analysis.yml" />
     <File Path=".github/workflows/cla.yml" />
     <File Path=".github/workflows/docfx_build.yml" />
@@ -79,6 +81,7 @@
   <Project Path="Source/AssetRipper.Export.PrimaryContent/AssetRipper.Export.PrimaryContent.csproj" />
   <Project Path="Source/AssetRipper.Export.UnityProjects/AssetRipper.Export.UnityProjects.csproj" />
   <Project Path="Source/AssetRipper.Export/AssetRipper.Export.csproj" />
+  <Project Path="Source/AssetRipper.Android/AssetRipper.Android.csproj" />
   <Project Path="Source/AssetRipper.GUI.Free/AssetRipper.GUI.Free.csproj" />
   <Project Path="Source/AssetRipper.GUI.Licensing.SourceGenerator/AssetRipper.GUI.Licensing.SourceGenerator.csproj" />
   <Project Path="Source/AssetRipper.GUI.Licensing/AssetRipper.GUI.Licensing.csproj" />
