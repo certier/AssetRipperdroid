@@ -76,7 +76,15 @@ Configure these protected repository or environment secrets before creating a re
 - `ANDROID_KEY_ALIAS`
 - `ANDROID_KEY_PASSWORD`
 
-Do not commit the keystore or its passwords. Keep the signing key backed up securely; updates to an installed Android application must use the same signing identity. The release workflow intentionally fails when signing configuration is missing rather than publishing a debug-signed package.
+Create the signing key once on a trusted maintainer machine and store a secure backup:
+
+```sh
+keytool -genkeypair -v -keystore assetripper-release.jks -storetype JKS \\
+  -keyalg RSA -keysize 4096 -validity 10000 -alias assetripper
+base64 -w 0 assetripper-release.jks
+```
+
+Put the base64 output and credentials into the four GitHub secrets listed above. Do not commit the keystore or its passwords. Keep the signing key backed up securely; updates to an installed Android application must use the same signing identity. The release workflow intentionally fails when signing configuration is missing rather than publishing a debug-signed package.
 
 The current application display version is `0.1.0-alpha.1`. Do not tag this version for public distribution until the device validation plan below has passed.
 
