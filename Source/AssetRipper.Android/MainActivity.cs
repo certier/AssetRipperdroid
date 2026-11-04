@@ -8,6 +8,7 @@ using Android.Provider;
 using Android.Views;
 using Android.Webkit;
 using AssetRipper.GUI.Web;
+using AssetRipper.IO.Files;
 
 namespace AssetRipper.Android;
 
@@ -35,6 +36,7 @@ public sealed class MainActivity : Activity
     {
         base.OnCreate(savedInstanceState);
 
+        LocalFileSystem.SetExecutingDirectory(FilesDir!.AbsolutePath);
         Window?.SetSoftInputMode(SoftInput.AdjustResize);
         webView = new WebView(this)
         {
