@@ -50,7 +50,7 @@ public sealed class MainActivity : Activity
         webView.Settings.DomStorageEnabled = true;
         webView.Settings.AllowFileAccess = false;
         webView.Settings.AllowContentAccess = true;
-        webView.Settings.MixedContentMode = MixedContentHandling.Never;
+        webView.Settings.MixedContentMode = MixedContentHandling.NeverAllow;
         webView.SetWebViewClient(new WebViewClient());
         SetContentView(webView);
 
@@ -322,13 +322,13 @@ public sealed class MainActivity : Activity
     {
         using ICursor? cursor = ContentResolver!.Query(
             uri,
-            [global::Android.Provider.OpenableColumns.DisplayName],
+            [global::Android.Provider.IOpenableColumns.DisplayName],
             null,
             null,
             null);
         if (cursor is not null && cursor.MoveToFirst())
         {
-            int index = cursor.GetColumnIndex(global::Android.Provider.OpenableColumns.DisplayName);
+            int index = cursor.GetColumnIndex(global::Android.Provider.IOpenableColumns.DisplayName);
             if (index >= 0 && !cursor.IsNull(index))
                 return cursor.GetString(index) ?? "selected-file";
         }
@@ -337,13 +337,15 @@ public sealed class MainActivity : Activity
 
     private async Task CopyTreeToDirectoryAsync(Uri treeUri, string destination)
     {
-        string rootDocumentId = DocumentsContract.GetTreeDocumentId(treeUri);
+        string rootDocumentId = DocumentsContract.GetTreeDocumentId(treeUri)
+            ?? throw new IOException("Android storage provider returned no root document identifier.");
         await CopyDocumentChildrenAsync(treeUri, rootDocumentId, destination);
     }
 
     private async Task CopyDocumentChildrenAsync(Uri treeUri, string parentDocumentId, string destination)
     {
-        Uri childrenUri = DocumentsContract.BuildChildDocumentsUriUsingTree(treeUri, parentDocumentId);
+        Uri childrenUri = DocumentsContract.BuildChildDocumentsUriUsingTree(treeUri, parentDocumentId)
+            ?? throw new IOException("Android storage provider could not enumerate the selected folder.");
         string[] projection =
         [
             DocumentsContract.Document.ColumnDocumentId,
@@ -358,9 +360,10 @@ public sealed class MainActivity : Activity
         while (cursor.MoveToNext())
         {
             string documentId = cursor.GetString(0) ?? throw new IOException("Missing document identifier.");
-            string name = Path.GetFileName(cursor.GetString(1) ?? "unnamed");
+            string name = Path.GetFileName(cursor.GetString(1) ?? "unnamed") ?? "unnamed";
             string mimeType = cursor.GetString(2) ?? "application/octet-stream";
-            Uri documentUri = DocumentsContract.BuildDocumentUriUsingTree(treeUri, documentId);
+            Uri documentUri = DocumentsContract.BuildDocumentUriUsingTree(treeUri, documentId)
+                ?? throw new IOException("Android storage provider returned an invalid document URI.");
             string localPath = Path.Combine(destination, name);
 
             if (mimeType == DocumentsContract.Document.MimeTypeDir)
@@ -370,7 +373,7 @@ public sealed class MainActivity : Activity
             }
             else
             {
-                using Stream input = ContentResolver.OpenInputStream(documentUri)
+                using Stream input = ContentResolver!.OpenInputStream(documentUri)
                     ?? throw new IOException($"Unable to read {name} from Android storage.");
                 await using FileStream output = File.Create(localPath);
                 await input.CopyToAsync(output);
@@ -420,16 +423,16 @@ public sealed class MainActivity : Activity
         if (IsFinishing || IsDestroyed)
             return;
 
-        new AlertDialog.Builder(this)
-            .SetTitle("Startup failed")
-            .SetMessage(exception.ToString())
-            .SetPositiveButton("Retry", (_, _) =>
-            {
-                serverStarted = false;
-                StartAssetRipper();
-            })
-            .SetNegativeButton("Close", (_, _) => Finish())
-            .Show();
+        AlertDialog.Builder builder = new(this);
+        builder.SetTitle("Startup failed");
+        builder.SetMessage(exception.ToString());
+        builder.SetPositiveButton("Retry", (_, _) =>
+        {
+            serverStarted = false;
+            StartAssetRipper();
+        });
+        builder.SetNegativeButton("Close", (_, _) => Finish());
+        builder.Show();
     }
 
     public override void OnBackPressed()
