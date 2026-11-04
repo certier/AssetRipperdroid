@@ -11,6 +11,7 @@
     <AndroidPackageFormat>apk</AndroidPackageFormat>
     <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
     <AndroidUseAapt2>true</AndroidUseAapt2>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\AssetRipper.GUI.Web\AssetRipper.GUI.Web.csproj" />
