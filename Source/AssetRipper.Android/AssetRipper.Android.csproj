@@ -5,7 +5,7 @@
     <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
     <ApplicationId>com.assetripper.android</ApplicationId>
     <ApplicationVersion>1</ApplicationVersion>
-    <ApplicationDisplayVersion>1.0.0</ApplicationDisplayVersion>
+    <ApplicationDisplayVersion>0.1.0-alpha.1</ApplicationDisplayVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AndroidPackageFormat>apk</AndroidPackageFormat>
