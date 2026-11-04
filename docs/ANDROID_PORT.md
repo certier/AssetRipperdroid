@@ -69,7 +69,7 @@ The CI workflow is [`.github/workflows/android.yml`](../.github/workflows/androi
 
 The maintainer workflow is [`.github/workflows/android-release.yml`](../.github/workflows/android-release.yml). It runs only for tags matching `android-v*`, requires a dedicated Android release keystore, signs the APK, calculates a SHA-256 checksum, and publishes a GitHub pre-release.
 
-Configure these protected repository or environment secrets before creating a release tag:
+Configure the `android-release` GitHub Actions environment and add these protected environment secrets before creating a release tag:
 
 - `ANDROID_KEYSTORE_BASE64`
 - `ANDROID_KEYSTORE_PASSWORD`
@@ -81,7 +81,7 @@ Create the signing key once on a trusted maintainer machine and store a secure b
 ```sh
 keytool -genkeypair -v -keystore assetripper-release.jks -storetype JKS \\
   -keyalg RSA -keysize 4096 -validity 10000 -alias assetripper
-base64 -w 0 assetripper-release.jks
+base64 < assetripper-release.jks | tr -d '\n'
 ```
 
 Put the base64 output and credentials into the four GitHub secrets listed above. Do not commit the keystore or its passwords. Keep the signing key backed up securely; updates to an installed Android application must use the same signing identity. The release workflow intentionally fails when signing configuration is missing rather than publishing a debug-signed package.
