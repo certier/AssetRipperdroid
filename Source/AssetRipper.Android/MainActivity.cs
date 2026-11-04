@@ -298,7 +298,7 @@ public sealed class MainActivity : Activity
         {
             ContentResolver!.TakePersistableUriPermission(uri, granted);
         }
-        catch (global::Android.Content.PM.SecurityException exception)
+        catch (global::Java.Lang.SecurityException exception)
         {
             global::Android.Util.Log.Warn("AssetRipper", $"Storage provider did not grant persistent access: {exception.Message}");
         }
