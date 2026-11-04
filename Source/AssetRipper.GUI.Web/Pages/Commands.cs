@@ -44,7 +44,7 @@ public static class Commands
 			}
 			else if (Dialogs.Supported)
 			{
-				paths = await Dialogs.OpenFiles();
+				paths = await Dialogs.SelectFilesAsync();
 			}
 			else
 			{
@@ -72,7 +72,7 @@ public static class Commands
 			}
 			else if (Dialogs.Supported)
 			{
-				paths = await Dialogs.OpenFolders();
+				paths = await Dialogs.SelectFoldersAsync();
 			}
 			else
 			{
