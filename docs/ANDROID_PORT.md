@@ -16,12 +16,13 @@ The first Android host milestone adds:
 - an Android document-picker bridge: selected files and folders are copied from SAF content URIs into app-private staging paths before the existing importer sees them.
 - export staging plus recursive copy into a user-selected SAF document tree after the existing exporter completes.
 
-This is an initial integration milestone, **not a completed Android port**. The SAF bridge is implemented but still requires successful CI compilation and physical-device testing. The GUI libraries keep their `Microsoft.AspNetCore.App` framework references private. The Android host currently experiments with bundling the managed ASP.NET Core runtime assemblies from the Linux ARM64 runtime pack; these managed assemblies must be validated under the Android Mono runtime before the host can be considered runnable.
+This is an initial integration milestone, **not a completed Android port**. The Release ARM64 Android publish and APK artifact upload now pass in GitHub Actions. The repository-wide solution build, tests, and DocFX build also pass. The SAF bridge still requires physical-device testing. The GUI libraries keep their `Microsoft.AspNetCore.App` framework references private. The Android host currently experiments with bundling the managed ASP.NET Core runtime assemblies from the Linux ARM64 runtime pack; these managed assemblies must be validated under the Android runtime before the host can be considered runnable.
 
 ## Required next milestones
 
 1. **Android-compatible server runtime**
-   - Validate that the bundled ASP.NET Core managed assemblies load correctly under Android Mono.
+   - Install the generated APK on an ARM64 Android device or emulator.
+   - Validate that the bundled ASP.NET Core managed assemblies load correctly under the Android runtime.
    - Verify Kestrel loopback hosting and all original routes on physical ARM64 Android devices.
    - If the managed runtime-pack approach is incompatible with Mono, replace only the HTTP hosting layer while retaining the existing page renderers, route behavior, APIs, and static assets.
 
