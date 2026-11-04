@@ -24,7 +24,7 @@ public partial class LocalFileSystem : FileSystem
 	public static void SetExecutingDirectory(string path)
 	{
 		ArgumentException.ThrowIfNullOrWhiteSpace(path);
-		string fullPath = Path.GetFullPath(path);
+		string fullPath = System.IO.Path.GetFullPath(path);
 		System.IO.Directory.CreateDirectory(fullPath);
 		Volatile.Write(ref s_executingDirectory, fullPath);
 	}
