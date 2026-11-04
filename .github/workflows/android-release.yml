@@ -89,6 +89,11 @@ jobs:
 
           mkdir -p release
           cp "$apk_path" "release/AssetRipper-Android-${GITHUB_REF_NAME}-arm64.apk"
+          apksigner verify --verbose --print-certs "release/AssetRipper-Android-${GITHUB_REF_NAME}-arm64.apk" | tee release/apk-signature.txt
+          if grep -qi 'CN=Android Debug' release/apk-signature.txt; then
+            echo "::error::Refusing to publish an APK signed with the Android debug certificate."
+            exit 1
+          fi
           cd release
           sha256sum *.apk > SHA256SUMS.txt
 
@@ -102,3 +107,4 @@ jobs:
           files: |
             release/*.apk
             release/SHA256SUMS.txt
+            release/apk-signature.txt
