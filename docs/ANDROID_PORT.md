@@ -1,59 +1,105 @@
 # Android port
 
-## Objective
+## Goal
 
-Run the existing AssetRipper application on Android without replacing its GUI or reimplementing its Unity asset pipeline. The Android host is a native Activity containing a WebView; the intended application UI remains the HTML/CSS/JavaScript served by `AssetRipper.GUI.Web`.
+Run the existing AssetRipper application on Android without replacing its web interface or Unity asset-processing pipeline.
 
-## Current implementation boundary
+The Android application is a native .NET Android Activity. It hosts the existing AssetRipper web UI in a WebView and starts the local application server on loopback.
 
-The first Android host milestone adds:
+## Current status
 
-- a .NET 10 Android application project;
-- a WebView host for the existing local web UI;
-- a loopback-only Kestrel endpoint on port 18555;
-- startup readiness polling and an on-screen startup error;
-- an Android ARM64 APK CI workflow.
-- an Android document-picker bridge: selected files and folders are copied from SAF content URIs into app-private staging paths before the existing importer sees them.
-- export staging plus recursive copy into a user-selected SAF document tree after the existing exporter completes.
+The Android ARM64 Release APK publishes successfully in GitHub Actions. The repository solution build, test workflow, and documentation build also pass on the integration branch.
 
-This is an initial integration milestone, **not a completed Android port**. The Release ARM64 Android publish and APK artifact upload now pass in GitHub Actions. The repository-wide solution build, tests, and DocFX build also pass. The SAF bridge still requires physical-device testing. The GUI libraries keep their `Microsoft.AspNetCore.App` framework references private. The Android host currently experiments with bundling the managed ASP.NET Core runtime assemblies from the Linux ARM64 runtime pack; these managed assemblies must be validated under the Android runtime before the host can be considered runnable.
+That is a packaging milestone, not proof that the application is ready for general use. The APK has not yet been installed and exercised on a physical Android device. In particular, the Android server startup path still needs runtime validation.
 
-## Required next milestones
+| Area | Status |
+| --- | --- |
+| .NET 10 Android ARM64 project | Implemented |
+| Existing AssetRipper web UI hosted in WebView | Implemented |
+| Local server startup polling and startup error UI | Implemented; device validation pending |
+| Android file and folder picker integration | Implemented; device validation pending |
+| Import staging in app-private storage | Implemented |
+| Export to a user-selected Storage Access Framework folder | Implemented; device validation pending |
+| Release APK compilation and artifact upload | Passing in CI |
+| Android installation and runtime smoke test | Not yet tested |
+| Large-project, lifecycle, and low-memory testing | Not yet tested |
+| Signed public release | Not available yet |
 
-1. **Android-compatible server runtime**
-   - Install the generated APK on an ARM64 Android device or emulator.
-   - Validate that the bundled ASP.NET Core managed assemblies load correctly under the Android runtime.
-   - Verify Kestrel loopback hosting and all original routes on physical ARM64 Android devices.
-   - If the managed runtime-pack approach is incompatible with Mono, replace only the HTTP hosting layer while retaining the existing page renderers, route behavior, APIs, and static assets.
+## Architecture
 
-2. **Storage Access Framework hardening**
-   - Test Android document and directory pickers on physical devices and multiple document providers.
-   - Harden cancellation, duplicate names, insufficient storage, provider errors, and interrupted transfers.
-   - Add export conflict handling and cleanup for abandoned staging directories.
+- `Source/AssetRipper.Android` contains the Android Activity and application manifest.
+- The Activity hosts the original `AssetRipper.GUI.Web` application in a WebView.
+- The local server listens on `127.0.0.1:18555`; the Activity waits for a successful HTTP response before navigating the WebView.
+- `AndroidDialogBridge` connects the existing GUI dialog requests to Android document pickers.
+- Selected files and folders are copied from content URIs into app-private staging directories. The existing importer therefore continues to receive filesystem paths.
+- Export output is staged locally and copied recursively to the directory selected by the user through Android's Storage Access Framework.
+- Desktop dialog behavior remains the fallback on non-Android platforms.
 
-3. **Native dialog replacement**
-   - Replace desktop native-dialog calls behind a platform abstraction.
-   - Keep desktop dialog behavior unchanged.
-   - Route Android dialog requests to the Activity's SAF bridge.
+## Runtime compatibility warning
 
-4. **Lifecycle and resource limits**
-   - Keep long-running import/export work alive through a foreground service with a visible notification.
-   - Persist job state and logs.
-   - Handle process recreation and storage exhaustion.
-   - Add cancellation and progress reporting without changing the original GUI layout.
+The existing web projects depend on `Microsoft.AspNetCore.App`. Android does not provide the ASP.NET Core shared runtime pack used by the desktop targets.
 
-5. **Verification**
-   - Build Debug and Release APKs.
-   - Install and launch on Android ARM64.
-   - Test APK, split APK, OBB, folder, Mono, and IL2CPP inputs.
-   - Verify texture/model/audio previews and Unity project export.
-   - Test large inputs, low-memory conditions, rotation, backgrounding, and SAF export.
+The Android project currently keeps the framework reference private and bundles managed ASP.NET Core assemblies from the .NET 10 Linux ARM64 runtime pack. This is an experimental compatibility approach. A successful Android publish only proves that the APK can be produced; it does not prove those assemblies can load under the Android runtime or that Kestrel can start there.
+
+The first device test must verify assembly loading, Kestrel startup, the loopback endpoint, static assets, and the original GUI routes. If this approach fails, replace the hosting layer with an Android-compatible implementation while preserving the existing UI, application services, and asset pipeline.
 
 ## Build
 
-```bash
+Requirements:
+
+- .NET 10 SDK
+- .NET Android workload
+- Android SDK components installed by the workload
+- ARM64 Android device for runtime testing (minimum supported platform: Android 7.0 / API 24)
+
+Build an APK:
+
+```sh
 dotnet workload install android
-dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj -c Release -f net10.0-android
+dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
+  --configuration Release \
+  --framework net10.0-android \
+  --runtime android-arm64 \
+  -p:AndroidPackageFormat=apk
 ```
 
-The build is expected to remain blocked until milestone 1 is completed. CI must report that failure rather than publishing a placeholder APK.
+The CI workflow is [`.github/workflows/android.yml`](../.github/workflows/android.yml). It publishes a Release APK and uploads it as the `AssetRipper-Android-APK` workflow artifact. Workflow artifacts are temporary and expire after the configured retention period; they are not permanent releases.
+
+## Validation plan
+
+### 1. Runtime smoke test
+
+- Install the APK on an ARM64 Android device or emulator.
+- Confirm the application starts without an unhandled exception.
+- Confirm the managed ASP.NET Core assemblies load and Kestrel binds only to loopback.
+- Confirm the WebView loads the original GUI and can reach its API and static assets.
+- Rotate the device, background the app, return to it, and test process recreation.
+
+### 2. Import and export
+
+- Import individual files and multiple files from the system picker.
+- Import folders from internal storage, removable storage, and supported cloud document providers.
+- Test cancellation, duplicate names, unreadable documents, unavailable providers, and interrupted copies.
+- Export a Unity project to a newly selected folder.
+- Test existing destination names, provider write failures, insufficient storage, and interrupted exports.
+- Confirm failed or abandoned operations do not silently appear as completed exports.
+
+### 3. Unity project coverage
+
+Test representative APK, split APK, OBB, folder, Mono, and IL2CPP inputs. Verify texture, model, audio, and other previews, then open the exported Unity project in the supported Unity editor.
+
+### 4. Resource and lifecycle behavior
+
+- Test small and large projects, including projects that approach available device memory.
+- Measure peak memory and temporary storage use.
+- Verify progress reporting and cancellation.
+- Ensure long-running jobs behave predictably when the Activity is backgrounded or the process is reclaimed.
+- Add a foreground service and persistent job state if device testing shows that background execution cannot reliably complete long operations.
+
+### 5. Release readiness
+
+- Validate on at least one physical ARM64 device.
+- Add automated or repeatable smoke tests for startup and basic import/export.
+- Configure a dedicated release signing key through protected CI secrets; never commit the keystore or passwords.
+- Publish versioned release notes that state tested Android versions, architecture, known limitations, and checksums.
+- Keep the Android build marked as experimental until the runtime and storage tests pass.
