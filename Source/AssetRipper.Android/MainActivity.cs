@@ -30,7 +30,6 @@ public sealed class MainActivity : Activity
     private TaskCompletionSource<string[]>? pendingImport;
     private TaskCompletionSource<string>? pendingExportFolder;
     private Uri? exportTreeUri;
-    private string? exportStagingPath;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
@@ -278,9 +277,9 @@ public sealed class MainActivity : Activity
             {
                 PersistUriPermission(tree, data.Flags);
                 exportTreeUri = tree;
-                exportStagingPath = Path.Combine(FilesDir!.AbsolutePath, "exports", Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(exportStagingPath);
-                completion.TrySetResult(exportStagingPath);
+                string stagingPath = Path.Combine(FilesDir!.AbsolutePath, "exports", Guid.NewGuid().ToString("N"));
+                Directory.CreateDirectory(stagingPath);
+                completion.TrySetResult(stagingPath);
             }
             catch (Exception exception)
             {
@@ -373,7 +372,6 @@ public sealed class MainActivity : Activity
 
         await CopyDirectoryToTreeAsync(exportedPath, exportTreeUri);
         exportTreeUri = null;
-        exportStagingPath = null;
     }
 
     private async Task CopyDirectoryToTreeAsync(string sourceDirectory, Uri targetDirectory)
