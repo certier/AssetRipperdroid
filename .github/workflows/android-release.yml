@@ -32,7 +32,7 @@ jobs:
         run: |
           set -euo pipefail
           tag_version="${GITHUB_REF_NAME#android-v}"
-          app_version="$(sed -n 's:.*<ApplicationDisplayVersion>\\(.*\\)</ApplicationDisplayVersion>.*:\\1:p' Source/AssetRipper.Android/AssetRipper.Android.csproj | head -n 1)"
+          app_version="$(sed -n 's:.*<ApplicationDisplayVersion>\(.*\)</ApplicationDisplayVersion>.*:\1:p' Source/AssetRipper.Android/AssetRipper.Android.csproj | head -n 1)"
           if [[ -z "$app_version" || "$tag_version" != "$app_version" ]]; then
             echo "::error::Tag version '$tag_version' does not match Android application version '$app_version'."
             exit 1
