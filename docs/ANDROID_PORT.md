@@ -65,6 +65,21 @@ dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
 
 The CI workflow is [`.github/workflows/android.yml`](../.github/workflows/android.yml). It publishes a Release APK and uploads it as the `AssetRipper-Android-APK` workflow artifact. Workflow artifacts are temporary and expire after the configured retention period; they are not permanent releases.
 
+## Signed pre-release workflow
+
+The maintainer workflow is [`.github/workflows/android-release.yml`](../.github/workflows/android-release.yml). It runs only for tags matching `android-v*`, requires a dedicated Android release keystore, signs the APK, calculates a SHA-256 checksum, and publishes a GitHub pre-release.
+
+Configure these protected repository or environment secrets before creating a release tag:
+
+- `ANDROID_KEYSTORE_BASE64`
+- `ANDROID_KEYSTORE_PASSWORD`
+- `ANDROID_KEY_ALIAS`
+- `ANDROID_KEY_PASSWORD`
+
+Do not commit the keystore or its passwords. Keep the signing key backed up securely; updates to an installed Android application must use the same signing identity. The release workflow intentionally fails when signing configuration is missing rather than publishing a debug-signed package.
+
+The current application display version is `0.1.0-alpha.1`. Do not tag this version for public distribution until the device validation plan below has passed.
+
 ## Validation plan
 
 ### 1. Runtime smoke test
