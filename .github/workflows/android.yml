@@ -1,0 +1,47 @@
+name: Android
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [master, android-port]
+    paths:
+      - "Source/**"
+      - ".github/workflows/android.yml"
+      - "global.json"
+      - "nuget.config"
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  android-arm64:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Restore
+        run: dotnet restore Source/AssetRipper.Android/AssetRipper.Android.csproj
+
+      - name: Build Android APK
+        run: dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj -c Release -f net10.0-android -p:AndroidPackageFormat=apk
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: AssetRipper-Android-ARM64-Test-APK
+          path: Source/AssetRipper.Android/bin/Release/com.assetripper.android-Signed.apk
+          if-no-files-found: error
+          retention-days: 14

@@ -1,5 +1,9 @@
 name: Test
 
+concurrency:
+  group: test-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [master]
@@ -16,6 +20,9 @@ jobs:
         uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
+
+      - name: Install Android workload
+        run: dotnet workload install android
 
       - name: Build Project
         run: dotnet build

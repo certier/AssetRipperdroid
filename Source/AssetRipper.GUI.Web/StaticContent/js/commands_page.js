@@ -83,7 +83,7 @@ const app = createApp({
 
 			this.debouncedInput = setTimeout(async () => {
 				try {
-					const response = await fetch(`/Dialogs/OpenFolder`);
+					const response = await fetch(`/Dialogs/ExportFolder`);
 					this.export_path = await response.json();
 				} catch (error) {
 					console.error('Error fetching data:', error);

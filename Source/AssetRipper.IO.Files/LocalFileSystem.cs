@@ -17,7 +17,17 @@ public partial class LocalFileSystem : FileSystem
 		public override void Delete(string path) => System.IO.Directory.Delete(path, true);
 	}
 
-	public static string ExecutingDirectory => AppContext.BaseDirectory;
+	private static string? s_executingDirectory;
+
+	public static string ExecutingDirectory => Volatile.Read(ref s_executingDirectory) ?? AppContext.BaseDirectory;
+
+	public static void SetExecutingDirectory(string path)
+	{
+		ArgumentException.ThrowIfNullOrWhiteSpace(path);
+		string fullPath = System.IO.Path.GetFullPath(path);
+		System.IO.Directory.CreateDirectory(fullPath);
+		Volatile.Write(ref s_executingDirectory, fullPath);
+	}
 
 	private string LocalTemporaryDirectory => Path.Join(ExecutingDirectory, "temp", GetRandomString()[0..4]);
 

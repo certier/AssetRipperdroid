@@ -1,0 +1,110 @@
+name: Android Release
+
+on:
+  push:
+    tags:
+      - "android-v*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    environment: android-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Install Android workload
+        run: dotnet workload install android
+
+      - name: Verify tag matches application version
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_version="${GITHUB_REF_NAME#android-v}"
+          app_version="$(sed -n 's:.*<ApplicationDisplayVersion>\(.*\)</ApplicationDisplayVersion>.*:\1:p' Source/AssetRipper.Android/AssetRipper.Android.csproj | head -n 1)"
+          if [[ -z "$app_version" || "$tag_version" != "$app_version" ]]; then
+            echo "::error::Tag version '$tag_version' does not match Android application version '$app_version'."
+            exit 1
+          fi
+
+      - name: Check release signing configuration
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing required repository or environment secret: ${name}"
+              exit 1
+            fi
+          done
+
+      - name: Restore
+        run: dotnet restore Source/AssetRipper.Android/AssetRipper.Android.csproj
+
+      - name: Build and sign Android APK
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          keystore_path="$RUNNER_TEMP/assetripper-release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$keystore_path"
+
+          dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
+            --configuration Release \
+            --framework net10.0-android \
+            --runtime android-arm64 \
+            -p:AndroidPackageFormat=apk \
+            -p:AndroidKeyStore=true \
+            -p:AndroidSigningKeyStore="$keystore_path" \
+            -p:AndroidSigningStorePass="$ANDROID_KEYSTORE_PASSWORD" \
+            -p:AndroidSigningKeyAlias="$ANDROID_KEY_ALIAS" \
+            -p:AndroidSigningKeyPass="$ANDROID_KEY_PASSWORD"
+
+          apk_path="$(find Source/AssetRipper.Android/bin/Release -type f -name '*.apk' -print -quit)"
+          if [[ -z "$apk_path" ]]; then
+            echo "::error::The Android publish completed without producing an APK."
+            exit 1
+          fi
+
+          mkdir -p release
+          cp "$apk_path" "release/AssetRipper-Android-${GITHUB_REF_NAME}-arm64.apk"
+          apksigner verify --verbose --print-certs "release/AssetRipper-Android-${GITHUB_REF_NAME}-arm64.apk" | tee release/apk-signature.txt
+          if grep -qi 'CN=Android Debug' release/apk-signature.txt; then
+            echo "::error::Refusing to publish an APK signed with the Android debug certificate."
+            exit 1
+          fi
+          cd release
+          sha256sum *.apk > SHA256SUMS.txt
+
+      - name: Publish GitHub pre-release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "AssetRipper Android ${{ github.ref_name }}"
+          prerelease: true
+          generate_release_notes: true
+          fail_on_unmatched_files: true
+          files: |
+            release/*.apk
+            release/SHA256SUMS.txt
+            release/apk-signature.txt

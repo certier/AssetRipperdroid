@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0-android</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <SupportedOSPlatformVersion>24</SupportedOSPlatformVersion>
+    <ApplicationId>com.assetripper.android</ApplicationId>
+    <ApplicationVersion>1</ApplicationVersion>
+    <ApplicationDisplayVersion>0.1.0-alpha.1</ApplicationDisplayVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AndroidPackageFormat>apk</AndroidPackageFormat>
+    <RuntimeIdentifiers>android-arm64</RuntimeIdentifiers>
+    <AndroidUseAapt2>true</AndroidUseAapt2>
+    <DisableTransitiveFrameworkReferenceDownloads>true</DisableTransitiveFrameworkReferenceDownloads>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AssetRipper.GUI.Web\AssetRipper.GUI.Web.csproj" />
+  </ItemGroup>
+  <Target Name="RemoveUnsupportedTransitiveAspNetCoreRuntimeReference" AfterTargets="AddTransitiveFrameworkReferences">
+    <ItemGroup>
+      <FrameworkReference Remove="@(FrameworkReference)" Condition="'%(FrameworkReference.Identity)' == 'Microsoft.AspNetCore.App' and '%(FrameworkReference.IsTransitiveFrameworkReference)' == 'true'" />
+    </ItemGroup>
+  </Target>
+  <ItemGroup>
+    <PackageDownload Include="Microsoft.AspNetCore.App.Runtime.linux-arm64" Version="[10.0.14]" />
+    <Reference Include="$(NuGetPackageRoot)microsoft.aspnetcore.app.runtime.linux-arm64/10.0.14/runtimes/linux-arm64/lib/net10.0/*.dll">
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+</Project>
