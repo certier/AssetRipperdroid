@@ -57,7 +57,7 @@ internal static class Dialogs
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string path = (await Dialogs.OpenFiles())?.FirstOrDefault() ?? "";
+			string path = (await Dialogs.SelectFilesAsync())?.FirstOrDefault() ?? "";
 			await Results.Json(path, AppJsonSerializerContext.Default.String).ExecuteAsync(context);
 		}
 	}
