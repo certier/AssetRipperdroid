@@ -7,6 +7,7 @@ using Android.OS;
 using Android.Provider;
 using Android.Views;
 using Android.Webkit;
+using Uri = Android.Net.Uri;
 using AssetRipper.GUI.Web;
 using AssetRipper.IO.Files;
 
