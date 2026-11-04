@@ -56,6 +56,7 @@
   <Folder Name="/Solution Items/Workflows/">
     <File Path=".github/dependabot.yml" />
     <File Path=".github/workflows/android.yml" />
+    <File Path=".github/workflows/android-release.yml" />
     <File Path=".github/workflows/analysis.yml" />
     <File Path=".github/workflows/cla.yml" />
     <File Path=".github/workflows/docfx_build.yml" />
