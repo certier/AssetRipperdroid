@@ -16,14 +16,14 @@ The first Android host milestone adds:
 - an Android document-picker bridge: selected files and folders are copied from SAF content URIs into app-private staging paths before the existing importer sees them.
 - export staging plus recursive copy into a user-selected SAF document tree after the existing exporter completes.
 
-This is an initial integration milestone, **not a completed Android port**. The SAF bridge is implemented but still requires successful CI compilation and physical-device testing. The referenced GUI project currently targets `net10.0` and uses the `Microsoft.AspNetCore.App` shared-framework reference. Android does not provide that shared framework automatically. The project reference therefore requires the ASP.NET Core runtime dependency migration described below before the APK can be considered buildable or runnable.
+This is an initial integration milestone, **not a completed Android port**. The SAF bridge is implemented but still requires successful CI compilation and physical-device testing. The GUI libraries keep their `Microsoft.AspNetCore.App` framework references private. The Android host currently experiments with bundling the managed ASP.NET Core runtime assemblies from the Linux ARM64 runtime pack; these managed assemblies must be validated under the Android Mono runtime before the host can be considered runnable.
 
 ## Required next milestones
 
 1. **Android-compatible server runtime**
-   - Replace shared-framework-only references in `AssetRipper.GUI.Web` and `AssetRipper.Web` with the minimum explicit ASP.NET Core package references that can run on Android.
-   - Verify Kestrel loopback hosting on physical ARM64 Android devices.
-   - Keep the existing route handlers, page renderers, APIs, and static assets unchanged.
+   - Validate that the bundled ASP.NET Core managed assemblies load correctly under Android Mono.
+   - Verify Kestrel loopback hosting and all original routes on physical ARM64 Android devices.
+   - If the managed runtime-pack approach is incompatible with Mono, replace only the HTTP hosting layer while retaining the existing page renderers, route behavior, APIs, and static assets.
 
 2. **Storage Access Framework hardening**
    - Test Android document and directory pickers on physical devices and multiple document providers.
