@@ -41,7 +41,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: AssetRipper-Android-APK
-          path: Source/AssetRipper.Android/bin/**/*.apk
+          name: AssetRipper-Android-ARM64-Test-APK
+          path: Source/AssetRipper.Android/bin/Release/com.assetripper.android-Signed.apk
           if-no-files-found: error
           retention-days: 14
