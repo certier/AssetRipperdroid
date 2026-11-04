@@ -410,6 +410,19 @@ public sealed class MainActivity : Activity
 
         await CopyDirectoryToTreeAsync(exportedPath, rootDocumentUri);
         exportTreeUri = null;
+
+        try
+        {
+            Directory.Delete(exportedPath, recursive: true);
+        }
+        catch (IOException exception)
+        {
+            global::Android.Util.Log.Warn("AssetRipper", $"Could not remove completed export staging data: {exception.Message}");
+        }
+        catch (UnauthorizedAccessException exception)
+        {
+            global::Android.Util.Log.Warn("AssetRipper", $"Could not remove completed export staging data: {exception.Message}");
+        }
     }
 
     private async Task CopyDirectoryToTreeAsync(string sourceDirectory, Uri targetDirectory)
@@ -467,6 +480,12 @@ public sealed class MainActivity : Activity
 
     protected override void OnDestroy()
     {
+        pendingImport?.TrySetCanceled();
+        pendingImport = null;
+        pendingExportFolder?.TrySetCanceled();
+        pendingExportFolder = null;
+        exportTreeUri = null;
+
         AndroidDialogBridge.Picker = null;
         AndroidDialogBridge.ExportFolderPicker = null;
         AndroidDialogBridge.ExportCompleted = null;
