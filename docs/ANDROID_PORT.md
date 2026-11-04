@@ -20,7 +20,7 @@ That is a packaging milestone, not proof that the application is ready for gener
 | Android file and folder picker integration | Implemented; device validation pending |
 | Import staging in app-private storage | Implemented |
 | Export to a user-selected Storage Access Framework folder | Implemented; device validation pending |
-| Release APK compilation and artifact upload | Passing in CI |
+| ARM64 test APK compilation and artifact upload | Passing in CI |
 | Android installation and runtime smoke test | Not yet tested |
 | Large-project, lifecycle, and low-memory testing | Not yet tested |
 | Signed public release | Not available yet |
@@ -63,7 +63,7 @@ dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
   -p:AndroidPackageFormat=apk
 ```
 
-The CI workflow is [`.github/workflows/android.yml`](../.github/workflows/android.yml). It publishes a Release APK and uploads it as the `AssetRipper-Android-APK` workflow artifact. Workflow artifacts are temporary and expire after the configured retention period; they are not permanent releases.
+The CI workflow is [`.github/workflows/android.yml`](../.github/workflows/android.yml). It publishes the installable `com.assetripper.android-Signed.apk` as the `AssetRipper-Android-ARM64-Test-APK` artifact. The APK is signed with the CI debug key for device testing only. It is not signed with the maintainer's release key and must not be distributed as a public release. Workflow artifacts are temporary and expire after the configured retention period.
 
 ## Signed pre-release workflow
 
@@ -86,7 +86,7 @@ base64 -w 0 assetripper-release.jks
 
 Put the base64 output and credentials into the four GitHub secrets listed above. Do not commit the keystore or its passwords. Keep the signing key backed up securely; updates to an installed Android application must use the same signing identity. The release workflow intentionally fails when signing configuration is missing rather than publishing a debug-signed package.
 
-The current application display version is `0.1.0-alpha.1`. Do not tag this version for public distribution until the device validation plan below has passed.
+The current application display version is `0.1.0-alpha.1`. Increment both the display version and Android version code for each new app release. Do not tag this version for public distribution until the device validation plan below has passed.
 
 ## Validation plan
 
