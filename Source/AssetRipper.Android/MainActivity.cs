@@ -314,6 +314,7 @@ public sealed class MainActivity : Activity
 
         SetOperationState(true, "Exporting Unity project...");
         string? stagingPath = null;
+        Uri? exportTarget = null;
         try
         {
             stagingPath = Path.Combine(
@@ -326,12 +327,27 @@ public sealed class MainActivity : Activity
                 ?? throw new IOException("The selected Android folder has no document identifier.");
             Uri rootDocumentUri = DocumentsContract.BuildDocumentUriUsingTree(treeUri, rootDocumentId)
                 ?? throw new IOException("The selected Android folder is not accessible.");
+            string exportName = $"AssetRipper_export_{DateTime.UtcNow:yyyyMMdd_HHmmss_fff}";
+            exportTarget = DocumentsContract.CreateDocument(
+                ContentResolver!,
+                rootDocumentUri,
+                DocumentsContract.Document.MimeTypeDir,
+                exportName)
+                ?? throw new IOException("The selected storage provider could not create the export folder.");
 
-            await CopyDirectoryToTreeAsync(stagingPath, rootDocumentUri);
-            SetStatus("Unity project export completed.");
+            await CopyDirectoryToTreeAsync(stagingPath, exportTarget);
+            SetStatus($"Unity project exported to {exportName}.");
         }
         catch (Exception exception)
         {
+            if (exportTarget is not null)
+            {
+                try { DocumentsContract.DeleteDocument(ContentResolver!, exportTarget); }
+                catch (Exception cleanupException)
+                {
+                    global::Android.Util.Log.Warn("AssetRipper", $"Could not remove incomplete export folder: {cleanupException.Message}");
+                }
+            }
             global::Android.Util.Log.Error("AssetRipper", exception.ToString());
             SetStatus($"Export failed: {exception.Message}");
             ShowError("Export failed", exception);
