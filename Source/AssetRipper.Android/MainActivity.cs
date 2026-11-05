@@ -493,9 +493,12 @@ public sealed class MainActivity : Activity
         global::AssetRipper.Import.Logging.LogCategory category,
         string message)
     {
+        if (IsFinishing || IsDestroyed)
+            return;
+
         RunOnUiThread(() =>
         {
-            if (statusText is not null && !string.IsNullOrWhiteSpace(message))
+            if (!IsFinishing && !IsDestroyed && statusText is not null && !string.IsNullOrWhiteSpace(message))
                 statusText.Text = message.Trim();
         });
     }
