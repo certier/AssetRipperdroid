@@ -3,7 +3,7 @@ name: Android
 on:
   workflow_dispatch:
   push:
-    branches: [master, android-port]
+    branches: [master, native-android]
     paths:
       - "Source/**"
       - ".github/workflows/android.yml"
