@@ -11,6 +11,7 @@ using Android.Widget;
 using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Util;
+using Uri = Android.Net.Uri;
 
 namespace AssetRipper.Android;
 
