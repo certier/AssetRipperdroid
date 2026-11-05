@@ -37,6 +37,8 @@ public sealed class AndroidEngineService : ILogger, IDisposable
         string[] stablePaths = inputPaths.ToArray();
         return Task.Run(() =>
         {
+            gameData = null;
+            GC.Collect();
             gameData = exportHandler.LoadAndProcess(stablePaths, LocalFileSystem.Instance);
         });
     }
