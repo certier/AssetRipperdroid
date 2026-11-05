@@ -48,7 +48,7 @@ jobs:
         run: dotnet test Source/AssetRipper.SerializationLogic.Tests/AssetRipper.SerializationLogic.Tests.csproj --configuration Release
 
       - name: Test core behavior
-        run: dotnet test Source/AssetRipper.Tests/AssetRipper.Tests.csproj --configuration Release
+        run: dotnet test Source/AssetRipper.Tests/AssetRipper.Tests.csproj --configuration Debug
 
       - name: Test YAML
         run: dotnet test Source/AssetRipper.Yaml.Tests/AssetRipper.Yaml.Tests.csproj --configuration Release
