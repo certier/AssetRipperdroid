@@ -8,6 +8,7 @@ using Android.Views;
 using Android.Widget;
 using Android.Graphics;
 using Android.Graphics.Drawables;
+using Android.Util;
 
 namespace AssetRipper.Android;
 
@@ -23,7 +24,6 @@ public sealed class MainActivity : Activity
 {
     private const int ImportRequestCode = 7401;
     private const int FolderRequestCode = 7402;
-
     private readonly List<Uri> selectedSources = [];
     private LinearLayout? sourceList;
     private TextView? sourceSummary;
@@ -40,27 +40,17 @@ public sealed class MainActivity : Activity
             | StatusBarVisibility.HideNavigation
             | StatusBarVisibility.ImmersiveSticky
             | StatusBarVisibility.LayoutStable);
-
         BuildNativeInterface();
     }
 
     private void BuildNativeInterface()
     {
-        ScrollView scroll = new(this)
-        {
-            FillViewport = true
-        };
+        ScrollView scroll = new(this) { FillViewport = true };
         scroll.SetBackgroundColor(Color.ParseColor("#0B1220"));
-
-        LinearLayout page = new(this)
-        {
-            Orientation = Orientation.Vertical
-        };
+        LinearLayout page = new(this) { Orientation = Orientation.Vertical };
         page.SetPadding(Dp(22), Dp(30), Dp(22), Dp(28));
 
-        TextView brand = Text("ASSET RIPPER", 13, "#8EA7CC", true);
-        page.AddView(brand);
-
+        page.AddView(Text("ASSET RIPPER", 13, "#8EA7CC", true));
         TextView title = Text("Unity asset extraction", 29, "#F4F7FC", true);
         title.SetPadding(0, Dp(10), 0, Dp(4));
         page.AddView(title);
@@ -83,11 +73,9 @@ public sealed class MainActivity : Activity
         importCard.AddView(filesButton);
 
         Button folderButton = SecondaryButton("Choose a folder");
-        folderButton.Click += (_, _) => OpenFolderPicker();
         LinearLayout.LayoutParams folderParams = new(
-            ViewGroup.LayoutParams.MatchParent,
-            Dp(50));
-        folderParams.TopMargin = Dp(10);
+            ViewGroup.LayoutParams.MatchParent, Dp(50)) { TopMargin = Dp(10) };
+        folderButton.Click += (_, _) => OpenFolderPicker();
         importCard.AddView(folderButton, folderParams);
         page.AddView(importCard);
 
@@ -95,10 +83,7 @@ public sealed class MainActivity : Activity
         selectedTitle.SetPadding(2, Dp(25), 0, Dp(10));
         page.AddView(selectedTitle);
 
-        sourceList = new LinearLayout(this)
-        {
-            Orientation = Orientation.Vertical
-        };
+        sourceList = new LinearLayout(this) { Orientation = Orientation.Vertical };
         page.AddView(sourceList);
 
         LinearLayout statusCard = Card();
@@ -111,9 +96,8 @@ public sealed class MainActivity : Activity
         statusText.SetPadding(0, Dp(8), 0, 0);
         statusCard.AddView(statusText);
         LinearLayout.LayoutParams statusParams = new(
-            ViewGroup.LayoutParams.MatchParent,
-            ViewGroup.LayoutParams.WrapContent);
-        statusParams.TopMargin = Dp(20);
+            ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
+        { TopMargin = Dp(20) };
         page.AddView(statusCard, statusParams);
 
         TextView footer = Text(
@@ -214,21 +198,16 @@ public sealed class MainActivity : Activity
             background.SetColor(Color.ParseColor("#172338"));
             background.SetCornerRadius(Dp(10));
             item.Background = background;
-
             LinearLayout.LayoutParams parameters = new(
-                ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.WrapContent);
-            parameters.BottomMargin = Dp(8);
+                ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
+            { BottomMargin = Dp(8) };
             sourceList.AddView(item, parameters);
         }
     }
 
     private LinearLayout Card()
     {
-        LinearLayout card = new(this)
-        {
-            Orientation = Orientation.Vertical
-        };
+        LinearLayout card = new(this) { Orientation = Orientation.Vertical };
         card.SetPadding(Dp(16), Dp(16), Dp(16), Dp(16));
         GradientDrawable background = new();
         background.SetColor(Color.ParseColor("#121E30"));
@@ -245,8 +224,7 @@ public sealed class MainActivity : Activity
         button.TextSize = 15;
         button.SetBackgroundTintList(ColorStateList.ValueOf(Color.ParseColor(color)));
         button.LayoutParameters = new LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MatchParent,
-            Dp(52));
+            ViewGroup.LayoutParams.MatchParent, Dp(52));
         return button;
     }
 
@@ -274,8 +252,5 @@ public sealed class MainActivity : Activity
     }
 
     private int Dp(int value) =>
-        (int)TypedValue.ApplyDimension(
-            ComplexUnitType.Dip,
-            value,
-            Resources!.DisplayMetrics);
+        (int)TypedValue.ApplyDimension(ComplexUnitType.Dip, value, Resources!.DisplayMetrics);
 }
