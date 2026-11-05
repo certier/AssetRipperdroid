@@ -18,15 +18,15 @@ AssetRipper supports Unity versions from `3.5.0` to `6000.4.X`. However, support
 
 ## Android port (development)
 
-This fork is being converted into an **Android-only, full-screen native application**. The final Android interface will use native Android controls and will not use a WebView, browser UI, embedded web server, or hosted ASP.NET interface. The existing AssetRipper processing engine is intended to be preserved behind an Android-specific adapter, subject to runtime and dependency validation.
+This fork is being converted into an **Android-only, full-screen native application**. The Android app no longer uses the previous WebView/Kestrel host. The native Activity now provides SAF file/folder selection, stages selected input in app-private storage, calls AssetRipper's existing engine APIs directly, and exports a Unity project to a user-selected SAF folder.
 
-**Current state:** the existing `android-port` APK is an earlier WebView-hosted engineering preview. It is not the native app described above, and its successful APK packaging does not prove that the ASP.NET Core/Kestrel host runs on Android. Do not treat it as a usable release or rely on it for important data. Native UI and direct engine integration are not yet complete.
+**Current state:** the native import/process/export path is wired in code, but this revision has not yet been verified by a clean Android CI build or a physical-device run. Transitive engine dependency compatibility and real-world SAF behavior remain unverified. This is an engineering preview, not a supported release. Do not rely on it as the only copy of important data.
 
-- [Native Android migration architecture and acceptance criteria](docs/NATIVE_ANDROID_MIGRATION.md)
-- [Previous Android preview notes and known limitations](docs/ANDROID_PORT.md)
+- [Native Android migration architecture, status, and acceptance criteria](docs/NATIVE_ANDROID_MIGRATION.md)
+- [Historical WebView preview notes](docs/ANDROID_PORT.md)
 - [Android build workflow](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Aandroid-port)
 
-No public Android release will be tagged until native UI, engine execution, SAF import/export, and physical-device smoke tests pass. The Android project currently targets ARM64 and .NET 10 for Android; supported API levels and release packaging remain subject to validation.
+The current Android target is ARM64 and .NET 10 for Android (minimum API 24). No public release will be tagged until clean CI, engine runtime compatibility, SAF import/export, and physical-device smoke tests pass.
 
 ## Premium Edition
 
