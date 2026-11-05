@@ -22,8 +22,8 @@ This fork is being converted into an **Android-only, full-screen native applicat
 
 **Current state:** the native import/process/export path now builds as an ARM64 APK in GitHub Actions, and the reusable engine test suite passes. The CI APK is signed with the Android Debug certificate, not a production release key, and has not yet been installed or exercised on a physical device; real Unity fixture processing, transitive runtime compatibility, and real-world SAF provider behavior remain unverified. This is an engineering preview, not a supported release. Do not rely on it as the only copy of important data.
 
-- [Latest successful Android ARM64 build and APK artifact](https://github.com/certier/AssetRipperdroid/actions/runs/42038033550)
-- [Latest successful engine test run](https://github.com/certier/AssetRipperdroid/actions/runs/42038033504)
+- [Latest successful Android ARM64 build and APK artifact](https://github.com/certier/AssetRipperdroid/actions/runs/42039144559)
+- [Latest successful engine test run](https://github.com/certier/AssetRipperdroid/actions/runs/42039144573)
 
 - [Native Android migration architecture, status, and acceptance criteria](docs/NATIVE_ANDROID_MIGRATION.md)
 - [Historical WebView preview notes](docs/ANDROID_PORT.md)
