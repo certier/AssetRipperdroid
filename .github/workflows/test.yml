@@ -2,7 +2,7 @@ name: Android engine tests
 
 on:
   push:
-    branches: [master, android-port]
+    branches: [master, native-android]
     paths:
       - "Source/**"
       - ".github/workflows/test.yml"
