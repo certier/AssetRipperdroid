@@ -505,6 +505,9 @@ public sealed class MainActivity : Activity
 
     private void SetOperationState(bool running, string message)
     {
+        if (IsFinishing || IsDestroyed)
+            return;
+
         operationRunning = running;
         if (processButton is not null)
             processButton.Enabled = !running && selectedSources.Count > 0;
@@ -515,7 +518,7 @@ public sealed class MainActivity : Activity
 
     private void SetStatus(string message)
     {
-        if (statusText is not null)
+        if (!IsFinishing && !IsDestroyed && statusText is not null)
             statusText.Text = message;
     }
 
