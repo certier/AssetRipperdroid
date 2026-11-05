@@ -17,6 +17,8 @@ The current android-port branch has moved beyond that preview:
 - The Linux ASP.NET Core runtime-pack workaround and obsolete INTERNET/cleartext manifest settings have been removed.
 - Native SAF file and folder pickers stage input into app-private storage.
 - The app now references the existing AssetRipper.Export.UnityProjects, AssetRipper.Export.PrimaryContent, and AssetRipper.IO.Files projects.
+- The root AssetRipper.slnx now contains only the Android application; its engine dependencies build transitively.
+- The desktop multi-platform publish workflow has been removed. The test workflow runs reusable engine test projects separately.
 - AndroidEngineService calls the existing ExportHandler.LoadAndProcess and ExportHandler.Export APIs directly. Primary-content export is also exposed by the adapter.
 - SAF export copies the generated Unity project tree into the user-selected document tree.
 
@@ -157,4 +159,4 @@ Required outcomes:
 
 ## Current status
 
-Native UI, SAF source selection/staging, direct engine calls, and SAF export wiring have been committed to the android-port branch. **Build success, engine runtime compatibility, and physical-device behavior remain unverified.** The app is still an engineering preview, not a release.
+Native UI, SAF source selection/staging, direct engine calls, SAF export wiring, an Android-only root solution, and removal of desktop binary publishing have been committed to the android-port branch. **Build success, engine runtime compatibility, and physical-device behavior remain unverified.** The app is still an engineering preview, not a release.
