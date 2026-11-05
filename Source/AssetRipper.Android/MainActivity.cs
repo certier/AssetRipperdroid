@@ -1,16 +1,18 @@
 // C#, Source/AssetRipper.Android/MainActivity.cs, .NET 10 Android, native Android ARM64
 using Android.App;
 using Android.Content;
-using Android.Content.Res;
 using Android.Database;
 using Android.Net;
 using Android.OS;
 using Android.Provider;
 using Android.Views;
 using Android.Widget;
-using Android.Graphics;
 using Android.Graphics.Drawables;
 using Android.Util;
+using Android.Webkit;
+using Color = Android.Graphics.Color;
+using Typeface = Android.Graphics.Typeface;
+using ColorStateList = Android.Content.Res.ColorStateList;
 using Uri = Android.Net.Uri;
 
 namespace AssetRipper.Android;
@@ -552,7 +554,7 @@ public sealed class MainActivity : Activity
         button.SetTextColor(Color.White);
         button.SetAllCaps(false);
         button.TextSize = 15;
-        button.SetBackgroundTintList(ColorStateList.ValueOf(Color.ParseColor(color)));
+        button.BackgroundTintList = ColorStateList.ValueOf(Color.ParseColor(color));
         button.LayoutParameters = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MatchParent, Dp(52));
         return button;
