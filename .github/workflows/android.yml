@@ -9,6 +9,13 @@ on:
       - ".github/workflows/android.yml"
       - "global.json"
       - "nuget.config"
+  pull_request:
+    branches: [master]
+    paths:
+      - "Source/**"
+      - ".github/workflows/android.yml"
+      - "global.json"
+      - "nuget.config"
 
 concurrency:
   group: android-${{ github.ref }}
