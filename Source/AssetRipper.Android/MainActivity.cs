@@ -45,11 +45,11 @@ public sealed class MainActivity : Activity
         Window?.SetStatusBarColor(Color.ParseColor("#101827"));
         if (Window?.DecorView is View decorView)
         {
-            decorView.SystemUiVisibility =
-                StatusBarVisibility.Fullscreen
-                | StatusBarVisibility.HideNavigation
-                | StatusBarVisibility.ImmersiveSticky
-                | StatusBarVisibility.LayoutStable;
+            decorView.SystemUiFlags =
+                SystemUiFlags.Fullscreen
+                | SystemUiFlags.HideNavigation
+                | SystemUiFlags.ImmersiveSticky
+                | SystemUiFlags.LayoutStable;
         }
 
         engine = new AndroidEngineService(FilesDir!.AbsolutePath);
