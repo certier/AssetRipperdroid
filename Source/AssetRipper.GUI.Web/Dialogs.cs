@@ -6,38 +6,14 @@ namespace AssetRipper.GUI.Web;
 
 internal static class Dialogs
 {
-	public static bool Supported => AndroidDialogBridge.Supported || NativeDialog.Supported;
-
-	internal static async Task<string[]?> SelectFilesAsync()
-	{
-		return AndroidDialogBridge.Supported
-			? await AndroidDialogBridge.PickFilesAsync()
-			: await OpenFileDialog.OpenFiles();
-	}
-
-	internal static async Task<string[]?> SelectFoldersAsync()
-	{
-		return AndroidDialogBridge.Supported
-			? await AndroidDialogBridge.PickFoldersAsync()
-			: await OpenFolderDialog.OpenFolders();
-	}
-
-	internal static async Task<string?> SelectFolderAsync()
-	{
-		if (AndroidDialogBridge.Supported)
-		{
-			string[] paths = await AndroidDialogBridge.PickFoldersAsync();
-			return paths.FirstOrDefault();
-		}
-		return await OpenFolderDialog.OpenFolder();
-	}
+	public static bool Supported => NativeDialog.Supported;
 
 	public static class OpenFiles
 	{
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string[] paths = await Dialogs.SelectFilesAsync() ?? [];
+			string[] paths = await OpenFileDialog.OpenFiles() ?? [];
 			await Results.Json(paths, AppJsonSerializerContext.Default.StringArray).ExecuteAsync(context);
 		}
 	}
@@ -47,7 +23,7 @@ internal static class Dialogs
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string[] paths = await Dialogs.SelectFoldersAsync() ?? [];
+			string[] paths = await OpenFolderDialog.OpenFolders() ?? [];
 			await Results.Json(paths, AppJsonSerializerContext.Default.StringArray).ExecuteAsync(context);
 		}
 	}
@@ -57,7 +33,7 @@ internal static class Dialogs
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string path = (await Dialogs.SelectFilesAsync())?.FirstOrDefault() ?? "";
+			string path = await OpenFileDialog.OpenFile() ?? "";
 			await Results.Json(path, AppJsonSerializerContext.Default.String).ExecuteAsync(context);
 		}
 	}
@@ -67,19 +43,7 @@ internal static class Dialogs
 		public static async Task HandleGetRequest(HttpContext context)
 		{
 			context.Response.DisableCaching();
-			string path = await Dialogs.SelectFolderAsync() ?? "";
-			await Results.Json(path, AppJsonSerializerContext.Default.String).ExecuteAsync(context);
-		}
-	}
-
-	public static class ExportFolder
-	{
-		public static async Task HandleGetRequest(HttpContext context)
-		{
-			context.Response.DisableCaching();
-			string path = AndroidDialogBridge.ExportFolderPicker is not null
-				? await AndroidDialogBridge.PickExportFolderAsync()
-				: await OpenFolderDialog.OpenFolder() ?? "";
+			string path = await OpenFolderDialog.OpenFolder() ?? "";
 			await Results.Json(path, AppJsonSerializerContext.Default.String).ExecuteAsync(context);
 		}
 	}

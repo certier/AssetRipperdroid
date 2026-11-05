@@ -1,31 +1,54 @@
-name: Test
-
-concurrency:
-  group: test-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+name: Android engine tests
 
 on:
   push:
-    branches: [master]
+    branches: [master, native-android]
+    paths:
+      - "Source/**"
+      - ".github/workflows/test.yml"
+      - "global.json"
+      - "nuget.config"
   pull_request:
     branches: [master]
+    paths:
+      - "Source/**"
+      - ".github/workflows/test.yml"
+      - "global.json"
+      - "nuget.config"
+
+concurrency:
+  group: android-engine-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-
+  engine-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
     steps:
-      - uses: actions/checkout@v7
-      - name: Setup .NET
-        uses: actions/setup-dotnet@v6
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET 10
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
 
-      - name: Install Android workload
-        run: dotnet workload install android
+      - name: Test AssetRipper assets
+        run: dotnet test Source/AssetRipper.Assets.Tests/AssetRipper.Assets.Tests.csproj --configuration Release
 
-      - name: Build Project
-        run: dotnet build
+      - name: Test file system
+        run: dotnet test Source/AssetRipper.IO.Files.Tests/AssetRipper.IO.Files.Tests.csproj --configuration Release
 
-      - name: Run Tests
-        run: dotnet test
+      - name: Test numerics
+        run: dotnet test Source/AssetRipper.Numerics.Tests/AssetRipper.Numerics.Tests.csproj --configuration Release
+
+      - name: Test serialization logic
+        run: dotnet test Source/AssetRipper.SerializationLogic.Tests/AssetRipper.SerializationLogic.Tests.csproj --configuration Release
+
+      - name: Test core behavior
+        run: dotnet test Source/AssetRipper.Tests/AssetRipper.Tests.csproj --configuration Debug
+
+      - name: Test YAML
+        run: dotnet test Source/AssetRipper.Yaml.Tests/AssetRipper.Yaml.Tests.csproj --configuration Release

@@ -42,9 +42,9 @@ public static class Commands
 			{
 				paths = values;
 			}
-			else if (Dialogs.Supported)
+			else if (NativeDialog.Supported)
 			{
-				paths = await Dialogs.SelectFilesAsync();
+				paths = await OpenFileDialog.OpenFiles();
 			}
 			else
 			{
@@ -70,9 +70,9 @@ public static class Commands
 			{
 				paths = values;
 			}
-			else if (Dialogs.Supported)
+			else if (NativeDialog.Supported)
 			{
-				paths = await Dialogs.SelectFoldersAsync();
+				paths = await OpenFolderDialog.OpenFolders();
 			}
 			else
 			{
@@ -105,11 +105,9 @@ public static class Commands
 
 			if (!string.IsNullOrEmpty(path))
 			{
-				string exportRoot = path;
 				bool createSubfolder = TryGetCreateSubfolder(form);
 				path = MaybeAppendTimestampedSubfolder(path, createSubfolder);
 				await GameFileLoader.ExportUnityProject(path);
-				await AndroidDialogBridge.CompleteExportAsync(exportRoot);
 			}
 			return null;
 		}
@@ -133,11 +131,9 @@ public static class Commands
 
 			if (!string.IsNullOrEmpty(path))
 			{
-				string exportRoot = path;
 				bool createSubfolder = TryGetCreateSubfolder(form);
 				path = MaybeAppendTimestampedSubfolder(path, createSubfolder);
 				await GameFileLoader.ExportPrimaryContent(path);
-				await AndroidDialogBridge.CompleteExportAsync(exportRoot);
 			}
 			return null;
 		}

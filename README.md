@@ -16,43 +16,20 @@ AssetRipper supports Unity versions from `3.5.0` to `6000.4.X`. However, support
 
 [Downloads](https://assetripper.com/download.html)
 
-## Android (early access)
+## Android port (development)
 
-An Android host is being developed on top of the existing AssetRipper application. It keeps the original web interface and Unity asset-processing engine, with a native Android Activity providing the WebView and Android's Storage Access Framework for file selection and export.
+This fork is being converted into an **Android-only, full-screen native application**. The Android app no longer uses the previous WebView/Kestrel host. The native Activity now provides SAF file/folder selection, stages selected input in app-private storage, calls AssetRipper's existing engine APIs directly, and exports a Unity project to a user-selected SAF folder. The root solution and binary publishing workflow have also been narrowed to Android; reusable engine source remains intact.
 
-[Android build status](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Amaster) · [Android implementation notes](docs/ANDROID_PORT.md)
+**Current state:** the native import/process/export path now builds as an ARM64 APK in GitHub Actions, and the reusable engine test suite passes. The CI APK is signed with the Android Debug certificate, not a production release key, and has not yet been installed or exercised on a physical device; real Unity fixture processing, transitive runtime compatibility, and real-world SAF provider behavior remain unverified. This is an engineering preview, not a supported release. Do not rely on it as the only copy of important data.
 
-**Current build:** Android ARM64 APK packaging passes in CI. The latest build is published by the [Android CI workflow](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Aandroid-port) as the `AssetRipper-Android-ARM64-Test-APK` artifact. Download the ZIP and install `com.assetripper.android-Signed.apk`. This APK uses GitHub Actions' debug signing key and is for installation testing only; it is not a distributable release. The CI debug key may change between runs, so uninstall an older test build before installing a newer one. Uninstalling clears the app's private staging data. Workflow artifacts expire after 14 days.
+- [Latest successful Android ARM64 build and APK artifact](https://github.com/certier/AssetRipperdroid/actions/runs/42039144559)
+- [Latest successful engine test run](https://github.com/certier/AssetRipperdroid/actions/runs/42039144573)
 
-**Important:** this is an engineering preview, not a supported release. The Android host currently bundles managed ASP.NET Core assemblies as a compatibility experiment. APK compilation does not prove that the server starts correctly on Android. Installation, startup, import, and export still need validation on an Android device. Do not use it as the only copy of important project data.
+- [Native Android migration architecture, status, and acceptance criteria](docs/NATIVE_ANDROID_MIGRATION.md)
+- [Historical WebView preview notes](docs/ANDROID_PORT.md)
+- [Android build workflow](https://github.com/certier/AssetRipperdroid/actions/workflows/android.yml?query=branch%3Anative-android)
 
-### Build from source
-
-Requirements: .NET 10 SDK, the .NET Android workload, and an Android ARM64 device (Android 7.0 / API 24 or later).
-
-```sh
-dotnet workload install android
-dotnet publish Source/AssetRipper.Android/AssetRipper.Android.csproj \
-  --configuration Release \
-  --framework net10.0-android \
-  --runtime android-arm64 \
-  -p:AndroidPackageFormat=apk
-```
-
-The current Android target is ARM64 only. The app's development version is `0.1.0-alpha.1`. Device testing is not complete, so this build is not a supported public release.
-
-### Maintainer release process
-
-Versioned Android pre-releases use tags named `android-v*` and the [Android Release workflow](.github/workflows/android-release.yml). Before creating a release tag, configure the protected `android-release` environment with these secrets:
-
-- `ANDROID_KEYSTORE_BASE64`: base64-encoded release keystore
-- `ANDROID_KEYSTORE_PASSWORD`: keystore password
-- `ANDROID_KEY_ALIAS`: signing key alias
-- `ANDROID_KEY_PASSWORD`: signing key password
-
-The workflow fails before publishing if any signing secret is missing. It signs the ARM64 APK, generates a SHA-256 checksum, and creates a GitHub pre-release. Keep the keystore and passwords out of the repository. Do not create a release tag until the Android runtime and import/export smoke tests have passed.
-
-See [Android port status and known limitations](docs/ANDROID_PORT.md) before trying the build.
+The current Android target is ARM64 and .NET 10 for Android (minimum API 24). No public release will be tagged until clean CI, engine runtime compatibility, SAF import/export, and physical-device smoke tests pass.
 
 ## Premium Edition
 

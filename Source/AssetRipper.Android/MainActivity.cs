@@ -1,4 +1,4 @@
-// C#, Source/AssetRipper.Android/MainActivity.cs, .NET 10 Android, Android ARM64
+// C#, Source/AssetRipper.Android/MainActivity.cs, .NET 10 Android, native Android ARM64
 using Android.App;
 using Android.Content;
 using Android.Database;
@@ -6,10 +6,13 @@ using Android.Net;
 using Android.OS;
 using Android.Provider;
 using Android.Views;
+using Android.Widget;
+using Android.Graphics.Drawables;
+using Android.Util;
 using Android.Webkit;
+using Color = Android.Graphics.Color;
+using Typeface = Android.Graphics.Typeface;
 using Uri = Android.Net.Uri;
-using AssetRipper.GUI.Web;
-using AssetRipper.IO.Files;
 
 namespace AssetRipper.Android;
 
@@ -17,339 +20,360 @@ namespace AssetRipper.Android;
     Label = "AssetRipper",
     MainLauncher = true,
     Exported = true,
+    Theme = "@android:style/Theme.Material.NoActionBar",
     ConfigurationChanges = global::Android.Content.PM.ConfigChanges.Orientation
         | global::Android.Content.PM.ConfigChanges.ScreenSize
         | global::Android.Content.PM.ConfigChanges.KeyboardHidden)]
 public sealed class MainActivity : Activity
 {
-    private const int ServerPort = 18555;
-    private const int ImportRequestCode = 18556;
-    private const int ExportRequestCode = 18557;
-    private const string LocalAddress = "http://127.0.0.1:18555/";
+    private const int ImportRequestCode = 7401;
+    private const int FolderRequestCode = 7402;
+    private const int ExportRequestCode = 7403;
 
-    private WebView? webView;
-    private bool serverStarted;
-    private TaskCompletionSource<string[]>? pendingImport;
-    private TaskCompletionSource<string>? pendingExportFolder;
-    private Uri? exportTreeUri;
+    private readonly List<Uri> selectedSources = [];
+    private AndroidEngineService? engine;
+    private LinearLayout? sourceList;
+    private TextView? sourceSummary;
+    private TextView? statusText;
+    private Button? processButton;
+    private Button? exportButton;
+    private bool operationRunning;
 
     protected override void OnCreate(Bundle? savedInstanceState)
     {
         base.OnCreate(savedInstanceState);
-
-        LocalFileSystem.SetExecutingDirectory(FilesDir!.AbsolutePath);
-        Window?.SetSoftInputMode(SoftInput.AdjustResize);
-        webView = new WebView(this)
+        Window?.SetFlags(WindowManagerFlags.Fullscreen, WindowManagerFlags.Fullscreen);
+        Window?.SetNavigationBarColor(Color.ParseColor("#101827"));
+        Window?.SetStatusBarColor(Color.ParseColor("#101827"));
+        if (Window?.DecorView is View decorView)
         {
-            LayoutParameters = new ViewGroup.LayoutParams(
-                ViewGroup.LayoutParams.MatchParent,
-                ViewGroup.LayoutParams.MatchParent)
-        };
-
-        webView.Settings.JavaScriptEnabled = true;
-        webView.Settings.DomStorageEnabled = true;
-        webView.Settings.AllowFileAccess = false;
-        webView.Settings.AllowContentAccess = true;
-        webView.Settings.MixedContentMode = MixedContentHandling.NeverAllow;
-        webView.SetWebViewClient(new WebViewClient());
-        SetContentView(webView);
-
-        AndroidDialogBridge.Picker = PickImportAsync;
-        AndroidDialogBridge.ExportFolderPicker = PickExportFolderAsync;
-        AndroidDialogBridge.ExportCompleted = CopyExportToSafAsync;
-
-        StartAssetRipper();
-    }
-
-    private void StartAssetRipper()
-    {
-        if (serverStarted)
-            return;
-
-        serverStarted = true;
-        string logPath = Path.Combine(FilesDir!.AbsolutePath, "assetripper-android.log");
-
-        _ = Task.Run(() =>
-        {
-            try
-            {
-                WebApplicationLauncher.Launch(
-                    port: ServerPort,
-                    headless: true,
-                    log: true,
-                    logPath: logPath);
-            }
-            catch (Exception exception)
-            {
-                global::Android.Util.Log.Error("AssetRipper", exception.ToString());
-                RunOnUiThread(() => ShowStartupError(exception));
-            }
-        });
-
-        _ = WaitForServerAndLoadAsync();
-    }
-
-    private async Task WaitForServerAndLoadAsync()
-    {
-        using HttpClient client = new()
-        {
-            Timeout = TimeSpan.FromSeconds(2)
-        };
-
-        Exception? lastError = null;
-        for (int attempt = 0; attempt < 40; attempt++)
-        {
-            try
-            {
-                using HttpResponseMessage response = await client.GetAsync(LocalAddress);
-                if (response.IsSuccessStatusCode)
-                {
-                    RunOnUiThread(() => webView?.LoadUrl(LocalAddress));
-                    return;
-                }
-            }
-            catch (Exception exception)
-            {
-                lastError = exception;
-            }
-
-            await Task.Delay(500);
+            decorView.SystemUiFlags =
+                SystemUiFlags.Fullscreen
+                | SystemUiFlags.HideNavigation
+                | SystemUiFlags.ImmersiveSticky
+                | SystemUiFlags.LayoutStable;
         }
 
-        RunOnUiThread(() => ShowStartupError(lastError
-            ?? new TimeoutException("AssetRipper did not start listening in time.")));
+        engine = new AndroidEngineService(FilesDir!.AbsolutePath);
+        engine.LogReceived += OnEngineLog;
+        BuildNativeInterface();
     }
 
-    private Task<string[]> PickImportAsync(AndroidPickerKind kind)
+    private void BuildNativeInterface()
     {
-        TaskCompletionSource<string[]> completion = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
+        ScrollView scroll = new(this) { FillViewport = true };
+        scroll.SetBackgroundColor(Color.ParseColor("#0B1220"));
+        LinearLayout page = new(this) { Orientation = Orientation.Vertical };
+        page.SetPadding(Dp(22), Dp(30), Dp(22), Dp(28));
 
-        RunOnUiThread(() =>
-        {
-            if (pendingImport is not null)
-            {
-                completion.TrySetException(new InvalidOperationException("Another Android picker is already open."));
-                return;
-            }
+        page.AddView(Text("ASSET RIPPER", 13, "#8EA7CC", true));
+        TextView title = Text("Unity asset extraction", 29, "#F4F7FC", true);
+        title.SetPadding(0, Dp(10), 0, Dp(4));
+        page.AddView(title);
 
-            pendingImport = completion;
-            Intent intent;
-            if (kind == AndroidPickerKind.Files)
-            {
-                intent = new Intent(Intent.ActionOpenDocument);
-                intent.AddCategory(Intent.CategoryOpenable);
-                intent.SetType("*/*");
-                intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantPersistableUriPermission);
-                intent.PutExtra(Intent.ExtraAllowMultiple, true);
-            }
-            else
-            {
-                intent = new Intent(Intent.ActionOpenDocumentTree);
-                intent.AddFlags(ActivityFlags.GrantReadUriPermission
-                    | ActivityFlags.GrantWriteUriPermission
-                    | ActivityFlags.GrantPersistableUriPermission);
-            }
+        TextView subtitle = Text(
+            "Import Unity game files, process their assets, and export a recovered Unity project.",
+            15,
+            "#A9B7CC");
+        subtitle.SetPadding(0, 0, 0, Dp(24));
+        page.AddView(subtitle);
 
-            try
-            {
-                StartActivityForResult(intent, ImportRequestCode);
-            }
-            catch (Exception exception)
-            {
-                pendingImport = null;
-                completion.TrySetException(exception);
-            }
-        });
+        LinearLayout importCard = Card();
+        importCard.AddView(Text("SOURCE FILES", 12, "#8EA7CC", true));
+        sourceSummary = Text("No source selected", 15, "#F4F7FC");
+        sourceSummary.SetPadding(0, Dp(9), 0, Dp(12));
+        importCard.AddView(sourceSummary);
 
-        return completion.Task;
+        Button filesButton = ActionButton("Choose Unity files", "#477FE8");
+        filesButton.Click += (_, _) => OpenFilePicker();
+        importCard.AddView(filesButton);
+
+        Button folderButton = SecondaryButton("Choose a folder");
+        LinearLayout.LayoutParams folderParams = new(
+            ViewGroup.LayoutParams.MatchParent, Dp(50)) { TopMargin = Dp(10) };
+        folderButton.Click += (_, _) => OpenFolderPicker();
+        importCard.AddView(folderButton, folderParams);
+        page.AddView(importCard);
+
+        TextView selectedTitle = Text("SELECTED SOURCES", 12, "#8EA7CC", true);
+        selectedTitle.SetPadding(2, Dp(25), 0, Dp(10));
+        page.AddView(selectedTitle);
+
+        sourceList = new LinearLayout(this) { Orientation = Orientation.Vertical };
+        page.AddView(sourceList);
+
+        processButton = ActionButton("Analyze and process", "#477FE8");
+        processButton.Enabled = false;
+        processButton.Click += async (_, _) => await ProcessSelectedSourcesAsync();
+        LinearLayout.LayoutParams processParams = new(
+            ViewGroup.LayoutParams.MatchParent, Dp(54)) { TopMargin = Dp(12) };
+        page.AddView(processButton, processParams);
+
+        exportButton = SecondaryButton("Export Unity project");
+        exportButton.Enabled = false;
+        exportButton.Click += (_, _) => OpenExportPicker();
+        LinearLayout.LayoutParams exportParams = new(
+            ViewGroup.LayoutParams.MatchParent, Dp(52)) { TopMargin = Dp(10) };
+        page.AddView(exportButton, exportParams);
+
+        LinearLayout statusCard = Card();
+        statusCard.SetPadding(Dp(16), Dp(16), Dp(16), Dp(16));
+        statusCard.AddView(Text("JOB STATUS", 12, "#75D6B0", true));
+        statusText = Text(
+            "Native interface ready. Select Unity files or a folder to begin.",
+            14,
+            "#D4DEEC");
+        statusText.SetPadding(0, Dp(8), 0, 0);
+        statusCard.AddView(statusText);
+        LinearLayout.LayoutParams statusParams = new(
+            ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
+        { TopMargin = Dp(20) };
+        page.AddView(statusCard, statusParams);
+
+        TextView footer = Text(
+            "Android ARM64  •  Native UI  •  Direct engine integration",
+            12,
+            "#71819A");
+        footer.SetPadding(2, Dp(22), 2, 0);
+        page.AddView(footer);
+
+        scroll.AddView(page);
+        SetContentView(scroll);
     }
 
-    private Task<string> PickExportFolderAsync()
+    private void OpenFilePicker()
     {
-        TaskCompletionSource<string> completion = new(
-            TaskCreationOptions.RunContinuationsAsynchronously);
-
-        RunOnUiThread(() =>
-        {
-            if (pendingExportFolder is not null)
-            {
-                completion.TrySetException(new InvalidOperationException("Another Android picker is already open."));
-                return;
-            }
-
-            pendingExportFolder = completion;
-            Intent intent = new(Intent.ActionOpenDocumentTree);
-            intent.AddFlags(ActivityFlags.GrantReadUriPermission
-                | ActivityFlags.GrantWriteUriPermission
-                | ActivityFlags.GrantPersistableUriPermission);
-
-            try
-            {
-                StartActivityForResult(intent, ExportRequestCode);
-            }
-            catch (Exception exception)
-            {
-                pendingExportFolder = null;
-                completion.TrySetException(exception);
-            }
-        });
-
-        return completion.Task;
+        Intent intent = new(Intent.ActionOpenDocument);
+        intent.AddCategory(Intent.CategoryOpenable);
+        intent.SetType("*/*");
+        intent.PutExtra(Intent.ExtraAllowMultiple, true);
+        intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantPersistableUriPermission);
+        StartActivityForResult(intent, ImportRequestCode);
     }
 
-    protected override async void OnActivityResult(int requestCode, Result resultCode, Intent? data)
+    private void OpenFolderPicker()
+    {
+        Intent intent = new(Intent.ActionOpenDocumentTree);
+        intent.AddFlags(ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantPersistableUriPermission);
+        StartActivityForResult(intent, FolderRequestCode);
+    }
+
+    private void OpenExportPicker()
+    {
+        if (engine?.IsLoaded != true || operationRunning)
+            return;
+
+        Intent intent = new(Intent.ActionOpenDocumentTree);
+        intent.AddFlags(
+            ActivityFlags.GrantReadUriPermission
+            | ActivityFlags.GrantWriteUriPermission
+            | ActivityFlags.GrantPersistableUriPermission);
+        StartActivityForResult(intent, ExportRequestCode);
+    }
+
+    protected override void OnActivityResult(int requestCode, Result resultCode, Intent? data)
     {
         base.OnActivityResult(requestCode, resultCode, data);
+        if (resultCode != Result.Ok || data?.Data is null && data?.ClipData is null)
+            return;
 
         if (requestCode == ImportRequestCode)
         {
-            TaskCompletionSource<string[]>? completion = pendingImport;
-            pendingImport = null;
-            if (completion is null)
-                return;
-
-            if (resultCode != Result.Ok || data is null)
+            if (data.ClipData is { ItemCount: > 0 } clip)
             {
-                completion.TrySetResult([]);
-                return;
+                for (int index = 0; index < clip.ItemCount; index++)
+                {
+                    Uri? uri = clip.GetItemAt(index)?.Uri;
+                    if (uri is not null)
+                        AddSource(uri, data.Flags);
+                }
             }
-
-            try
+            else if (data.Data is not null)
             {
-                Uri? tree = data.Data;
-                if (tree is not null)
-                    PersistUriPermission(tree, data.Flags);
-
-                string staging = Path.Combine(FilesDir!.AbsolutePath, "imports", Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(staging);
-
-                List<Uri> selected = [];
-                if (data.ClipData is { ItemCount: > 0 } clip)
-                {
-                    for (int i = 0; i < clip.ItemCount; i++)
-                    {
-                        Uri? uri = clip.GetItemAt(i)?.Uri;
-                        if (uri is not null)
-                            selected.Add(uri);
-                    }
-                }
-                else if (data.Data is not null)
-                {
-                    selected.Add(data.Data);
-                }
-
-                List<string> paths = [];
-                foreach (Uri uri in selected)
-                {
-                    if (DocumentsContract.IsTreeUri(uri))
-                    {
-                        string folder = Path.Combine(staging, "folder");
-                        Directory.CreateDirectory(folder);
-                        await CopyTreeToDirectoryAsync(uri, folder);
-                        paths.Add(folder);
-                    }
-                    else
-                    {
-                        paths.Add(await CopyDocumentToDirectoryAsync(uri, staging));
-                    }
-                }
-
-                completion.TrySetResult(paths.ToArray());
+                AddSource(data.Data, data.Flags);
             }
-            catch (Exception exception)
-            {
-                completion.TrySetException(exception);
-            }
-            return;
+            RefreshSourceList();
         }
-
-        if (requestCode == ExportRequestCode)
+        else if (requestCode == FolderRequestCode && data.Data is not null)
         {
-            TaskCompletionSource<string>? completion = pendingExportFolder;
-            pendingExportFolder = null;
-            if (completion is null)
-                return;
-
-            if (resultCode != Result.Ok || data?.Data is not Uri tree)
-            {
-                completion.TrySetResult(string.Empty);
-                return;
-            }
-
-            try
-            {
-                PersistUriPermission(tree, data.Flags);
-                exportTreeUri = tree;
-                string stagingPath = Path.Combine(FilesDir!.AbsolutePath, "exports", Guid.NewGuid().ToString("N"));
-                Directory.CreateDirectory(stagingPath);
-                completion.TrySetResult(stagingPath);
-            }
-            catch (Exception exception)
-            {
-                completion.TrySetException(exception);
-            }
+            AddSource(data.Data, data.Flags);
+            RefreshSourceList();
+        }
+        else if (requestCode == ExportRequestCode && data.Data is not null)
+        {
+            PersistUriPermission(data.Data, data.Flags);
+            _ = ExportToSelectedFolderAsync(data.Data);
         }
     }
 
-    private void PersistUriPermission(Uri uri, ActivityFlags flags)
+    private void AddSource(Uri uri, ActivityFlags resultFlags)
     {
-        ActivityFlags granted = flags & (ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission);
+        if (selectedSources.Any(existing => existing.ToString() == uri.ToString()))
+            return;
+
+        PersistUriPermission(uri, resultFlags);
+        selectedSources.Add(uri);
+    }
+
+    private void PersistUriPermission(Uri uri, ActivityFlags resultFlags)
+    {
+        ActivityFlags granted = resultFlags
+            & (ActivityFlags.GrantReadUriPermission | ActivityFlags.GrantWriteUriPermission);
         if (granted == 0)
             return;
 
         try
         {
-            ContentResolver!.TakePersistableUriPermission(uri, granted);
+            ContentResolver?.TakePersistableUriPermission(uri, granted);
         }
-        catch (global::Java.Lang.SecurityException exception)
+        catch (Java.Lang.SecurityException exception)
         {
-            global::Android.Util.Log.Warn("AssetRipper", $"Storage provider did not grant persistent access: {exception.Message}");
+            global::Android.Util.Log.Warn("AssetRipper", $"Persistable URI permission unavailable: {exception.Message}");
+        }
+    }
+
+    private void RefreshSourceList()
+    {
+        if (sourceList is null || sourceSummary is null)
+            return;
+
+        sourceList.RemoveAllViews();
+        sourceSummary.Text = selectedSources.Count == 0
+            ? "No source selected"
+            : $"{selectedSources.Count} source(s) selected";
+
+        foreach (Uri uri in selectedSources)
+        {
+            TextView item = Text(GetDisplayName(uri), 14, "#DCE6F5");
+            item.SetPadding(Dp(13), Dp(12), Dp(13), Dp(12));
+            GradientDrawable background = new();
+            background.SetColor(Color.ParseColor("#172338"));
+            background.SetCornerRadius(Dp(10));
+            item.Background = background;
+            LinearLayout.LayoutParams parameters = new(
+                ViewGroup.LayoutParams.MatchParent, ViewGroup.LayoutParams.WrapContent)
+            { BottomMargin = Dp(8) };
+            sourceList.AddView(item, parameters);
+        }
+
+        if (processButton is not null)
+            processButton.Enabled = selectedSources.Count > 0 && !operationRunning;
+    }
+
+    private async Task ProcessSelectedSourcesAsync()
+    {
+        if (engine is null || selectedSources.Count == 0 || operationRunning)
+            return;
+
+        SetOperationState(true, "Copying selected sources into private app storage...");
+        try
+        {
+            string batchDirectory = Path.Combine(
+                FilesDir!.AbsolutePath,
+                "imports",
+                DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff"));
+            Directory.CreateDirectory(batchDirectory);
+
+            List<string> stagedPaths = [];
+            foreach (Uri uri in selectedSources)
+            {
+                if (DocumentsContract.IsTreeUri(uri))
+                {
+                    string folderName = SafeFileName(GetDisplayName(uri));
+                    string folderPath = GetAvailablePath(batchDirectory, folderName);
+                    Directory.CreateDirectory(folderPath);
+                    await CopyTreeToDirectoryAsync(uri, folderPath);
+                    stagedPaths.Add(folderPath);
+                }
+                else
+                {
+                    stagedPaths.Add(await CopyDocumentToDirectoryAsync(uri, batchDirectory));
+                }
+            }
+
+            SetStatus("Loading and processing Unity assets...");
+            await engine.LoadAndProcessAsync(stagedPaths);
+            SetStatus("Processing completed. Choose an export destination.");
+            if (exportButton is not null)
+                exportButton.Enabled = engine.IsLoaded;
+        }
+        catch (Exception exception)
+        {
+            global::Android.Util.Log.Error("AssetRipper", exception.ToString());
+            SetStatus($"Import failed: {exception.Message}");
+            ShowError("Import failed", exception);
+        }
+        finally
+        {
+            SetOperationState(false, statusText?.Text ?? "Ready");
+        }
+    }
+
+    private async Task ExportToSelectedFolderAsync(Uri treeUri)
+    {
+        if (engine is null || !engine.IsLoaded || operationRunning)
+            return;
+
+        SetOperationState(true, "Exporting Unity project...");
+        string? stagingPath = null;
+        Uri? exportTarget = null;
+        try
+        {
+            stagingPath = Path.Combine(
+                FilesDir!.AbsolutePath,
+                "exports",
+                DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff"));
+            await engine.ExportUnityProjectAsync(stagingPath);
+
+            string rootDocumentId = DocumentsContract.GetTreeDocumentId(treeUri)
+                ?? throw new IOException("The selected Android folder has no document identifier.");
+            Uri rootDocumentUri = DocumentsContract.BuildDocumentUriUsingTree(treeUri, rootDocumentId)
+                ?? throw new IOException("The selected Android folder is not accessible.");
+            string exportName = $"AssetRipper_export_{DateTime.UtcNow:yyyyMMdd_HHmmss_fff}";
+            exportTarget = DocumentsContract.CreateDocument(
+                ContentResolver!,
+                rootDocumentUri,
+                DocumentsContract.Document.MimeTypeDir,
+                exportName)
+                ?? throw new IOException("The selected storage provider could not create the export folder.");
+
+            await CopyDirectoryToTreeAsync(stagingPath, exportTarget);
+            SetStatus($"Unity project exported to {exportName}.");
+        }
+        catch (Exception exception)
+        {
+            if (exportTarget is not null)
+            {
+                try { DocumentsContract.DeleteDocument(ContentResolver!, exportTarget); }
+                catch (Exception cleanupException)
+                {
+                    global::Android.Util.Log.Warn("AssetRipper", $"Could not remove incomplete export folder: {cleanupException.Message}");
+                }
+            }
+            global::Android.Util.Log.Error("AssetRipper", exception.ToString());
+            SetStatus($"Export failed: {exception.Message}");
+            ShowError("Export failed", exception);
+        }
+        finally
+        {
+            if (stagingPath is not null && Directory.Exists(stagingPath))
+            {
+                try { Directory.Delete(stagingPath, recursive: true); }
+                catch (IOException exception) { global::Android.Util.Log.Warn("AssetRipper", exception.Message); }
+            }
+            SetOperationState(false, statusText?.Text ?? "Ready");
         }
     }
 
     private async Task<string> CopyDocumentToDirectoryAsync(Uri uri, string destination)
     {
-        string displayName = Path.GetFileName(GetDisplayName(uri));
+        string displayName = SafeFileName(GetDisplayName(uri));
         string target = GetAvailablePath(destination, displayName);
         using Stream input = ContentResolver!.OpenInputStream(uri)
             ?? throw new IOException($"Unable to open selected document: {displayName}");
         await using FileStream output = File.Create(target);
         await input.CopyToAsync(output);
         return target;
-    }
-
-    private static string GetAvailablePath(string directory, string fileName)
-    {
-        string candidate = Path.Combine(directory, fileName);
-        if (!File.Exists(candidate) && !Directory.Exists(candidate))
-            return candidate;
-
-        string name = Path.GetFileNameWithoutExtension(fileName);
-        string extension = Path.GetExtension(fileName);
-        for (int suffix = 2; ; suffix++)
-        {
-            candidate = Path.Combine(directory, $"{name} ({suffix}){extension}");
-            if (!File.Exists(candidate) && !Directory.Exists(candidate))
-                return candidate;
-        }
-    }
-
-    private string GetDisplayName(Uri uri)
-    {
-        using ICursor? cursor = ContentResolver!.Query(
-            uri,
-            [global::Android.Provider.IOpenableColumns.DisplayName],
-            null,
-            null,
-            null);
-        if (cursor is not null && cursor.MoveToFirst())
-        {
-            int index = cursor.GetColumnIndex(global::Android.Provider.IOpenableColumns.DisplayName);
-            if (index >= 0 && !cursor.IsNull(index))
-                return cursor.GetString(index) ?? "selected-file";
-        }
-        return $"selected-{Guid.NewGuid():N}";
     }
 
     private async Task CopyTreeToDirectoryAsync(Uri treeUri, string destination)
@@ -377,11 +401,11 @@ public sealed class MainActivity : Activity
         while (cursor.MoveToNext())
         {
             string documentId = cursor.GetString(0) ?? throw new IOException("Missing document identifier.");
-            string name = Path.GetFileName(cursor.GetString(1) ?? "unnamed") ?? "unnamed";
+            string name = SafeFileName(cursor.GetString(1) ?? "unnamed");
             string mimeType = cursor.GetString(2) ?? "application/octet-stream";
+            string localPath = GetAvailablePath(destination, name);
             Uri documentUri = DocumentsContract.BuildDocumentUriUsingTree(treeUri, documentId)
                 ?? throw new IOException("Android storage provider returned an invalid document URI.");
-            string localPath = Path.Combine(destination, name);
 
             if (mimeType == DocumentsContract.Document.MimeTypeDir)
             {
@@ -395,34 +419,6 @@ public sealed class MainActivity : Activity
                 await using FileStream output = File.Create(localPath);
                 await input.CopyToAsync(output);
             }
-        }
-    }
-
-    private async Task CopyExportToSafAsync(string exportedPath)
-    {
-        if (exportTreeUri is null || string.IsNullOrWhiteSpace(exportedPath) || !Directory.Exists(exportedPath))
-            return;
-
-        Uri selectedTree = exportTreeUri;
-        string rootDocumentId = DocumentsContract.GetTreeDocumentId(selectedTree)
-            ?? throw new IOException("Android storage provider returned no export folder identifier.");
-        Uri rootDocumentUri = DocumentsContract.BuildDocumentUriUsingTree(selectedTree, rootDocumentId)
-            ?? throw new IOException("Android storage provider returned an invalid export folder URI.");
-
-        await CopyDirectoryToTreeAsync(exportedPath, rootDocumentUri);
-        exportTreeUri = null;
-
-        try
-        {
-            Directory.Delete(exportedPath, recursive: true);
-        }
-        catch (IOException exception)
-        {
-            global::Android.Util.Log.Warn("AssetRipper", $"Could not remove completed export staging data: {exception.Message}");
-        }
-        catch (UnauthorizedAccessException exception)
-        {
-            global::Android.Util.Log.Warn("AssetRipper", $"Could not remove completed export staging data: {exception.Message}");
         }
     }
 
@@ -454,45 +450,155 @@ public sealed class MainActivity : Activity
         }
     }
 
-    private void ShowStartupError(Exception exception)
+    private string GetDisplayName(Uri uri)
+    {
+        using ICursor? cursor = ContentResolver!.Query(
+            uri,
+            [global::Android.Provider.IOpenableColumns.DisplayName],
+            null,
+            null,
+            null);
+        if (cursor is not null && cursor.MoveToFirst())
+        {
+            int index = cursor.GetColumnIndex(global::Android.Provider.IOpenableColumns.DisplayName);
+            if (index >= 0 && !cursor.IsNull(index))
+                return cursor.GetString(index) ?? "selected-file";
+        }
+        return uri.LastPathSegment ?? "selected-file";
+    }
+
+    private static string SafeFileName(string value)
+    {
+        string name = Path.GetFileName(value);
+        return string.IsNullOrWhiteSpace(name) || name is "." or ".."
+            ? $"source-{Guid.NewGuid():N}"
+            : name;
+    }
+
+    private static string GetAvailablePath(string directory, string fileName)
+    {
+        string candidate = Path.Combine(directory, fileName);
+        if (!File.Exists(candidate) && !Directory.Exists(candidate))
+            return candidate;
+
+        string name = Path.GetFileNameWithoutExtension(fileName);
+        string extension = Path.GetExtension(fileName);
+        for (int suffix = 2; ; suffix++)
+        {
+            candidate = Path.Combine(directory, $"{name} ({suffix}){extension}");
+            if (!File.Exists(candidate) && !Directory.Exists(candidate))
+                return candidate;
+        }
+    }
+
+    private void OnEngineLog(global::AssetRipper.Import.Logging.LogType type,
+        global::AssetRipper.Import.Logging.LogCategory category,
+        string message)
     {
         if (IsFinishing || IsDestroyed)
             return;
 
-        AlertDialog.Builder builder = new(this);
-        builder.SetTitle("Startup failed");
-        builder.SetMessage(exception.ToString());
-        builder.SetPositiveButton("Retry", (_, _) =>
+        RunOnUiThread(() =>
         {
-            serverStarted = false;
-            StartAssetRipper();
+            if (!IsFinishing && !IsDestroyed && statusText is not null && !string.IsNullOrWhiteSpace(message))
+                statusText.Text = message.Trim();
         });
-        builder.SetNegativeButton("Close", (_, _) => Finish());
-        builder.Show();
     }
 
-    public override void OnBackPressed()
+    private void SetOperationState(bool running, string message)
     {
-        if (webView?.CanGoBack() == true)
-            webView.GoBack();
-        else
-            base.OnBackPressed();
+        if (IsFinishing || IsDestroyed)
+            return;
+
+        operationRunning = running;
+        if (processButton is not null)
+            processButton.Enabled = !running && selectedSources.Count > 0;
+        if (exportButton is not null)
+            exportButton.Enabled = !running && engine?.IsLoaded == true;
+        SetStatus(message);
     }
+
+    private void SetStatus(string message)
+    {
+        if (!IsFinishing && !IsDestroyed && statusText is not null)
+            statusText.Text = message;
+    }
+
+    private void ShowError(string title, Exception exception)
+    {
+        if (IsFinishing || IsDestroyed)
+            return;
+
+        new AlertDialog.Builder(this)
+            .SetTitle(title)
+            .SetMessage(exception.Message)
+            .SetPositiveButton("OK", (_, _) => { })
+            .Show();
+    }
+
+    private LinearLayout Card()
+    {
+        LinearLayout card = new(this) { Orientation = Orientation.Vertical };
+        card.SetPadding(Dp(16), Dp(16), Dp(16), Dp(16));
+        GradientDrawable background = new();
+        background.SetColor(Color.ParseColor("#121E30"));
+        background.SetCornerRadius(Dp(16));
+        card.Background = background;
+        return card;
+    }
+
+    private Button ActionButton(string label, string color)
+    {
+        Button button = new(this) { Text = label };
+        button.SetTextColor(Color.White);
+        button.SetAllCaps(false);
+        button.TextSize = 15;
+        GradientDrawable background = new();
+        background.SetColor(Color.ParseColor(color));
+        background.SetCornerRadius(Dp(12));
+        button.Background = background;
+        button.LayoutParameters = new LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MatchParent, Dp(52));
+        return button;
+    }
+
+    private Button SecondaryButton(string label)
+    {
+        Button button = new(this) { Text = label };
+        button.SetTextColor(Color.ParseColor("#E7EDF7"));
+        button.SetAllCaps(false);
+        button.TextSize = 15;
+        GradientDrawable background = new();
+        background.SetColor(Color.ParseColor("#263750"));
+        background.SetCornerRadius(Dp(12));
+        button.Background = background;
+        return button;
+    }
+
+    private TextView Text(string value, float size, string color, bool bold = false)
+    {
+        TextView view = new(this)
+        {
+            Text = value,
+            TextSize = size,
+            Typeface = bold ? Typeface.DefaultBold : Typeface.Default
+        };
+        view.SetTextColor(Color.ParseColor(color));
+        view.SetIncludeFontPadding(true);
+        return view;
+    }
+
+    private int Dp(int value) =>
+        (int)TypedValue.ApplyDimension(ComplexUnitType.Dip, value, Resources!.DisplayMetrics);
 
     protected override void OnDestroy()
     {
-        pendingImport?.TrySetCanceled();
-        pendingImport = null;
-        pendingExportFolder?.TrySetCanceled();
-        pendingExportFolder = null;
-        exportTreeUri = null;
-
-        AndroidDialogBridge.Picker = null;
-        AndroidDialogBridge.ExportFolderPicker = null;
-        AndroidDialogBridge.ExportCompleted = null;
-        webView?.StopLoading();
-        webView?.Destroy();
-        webView = null;
+        if (engine is not null)
+        {
+            engine.LogReceived -= OnEngineLog;
+            engine.Dispose();
+            engine = null;
+        }
         base.OnDestroy();
     }
 }
