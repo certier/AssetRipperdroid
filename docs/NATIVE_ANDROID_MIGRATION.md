@@ -1,148 +1,160 @@
 # Native Android migration
 
-## Decision
+## Product requirement
 
-The Android application must present a **native Android interface**. A WebView, browser tab, embedded browser, loopback HTTP server, or hosted ASP.NET UI is not an acceptable final UI.
+The Android application is a full-screen native Android app. A WebView, browser tab, embedded browser, loopback HTTP server, or hosted ASP.NET UI is not acceptable in the shipped app.
 
-Keep the AssetRipper extraction and serialization engine wherever its dependencies are compatible with .NET for Android. Replace only the presentation and platform integration layers. Do not rewrite the engine or delete desktop source projects until their reusable boundaries and dependencies have been mapped.
+Keep the AssetRipper extraction and serialization engine wherever its dependencies are compatible with .NET for Android. Replace only presentation and platform integration. Do not rewrite the engine or delete reusable engine projects to make the repository appear Android-only.
 
-## Verified starting point
+## Verified baseline
 
-The android-port branch currently contains:
+The previous Android preview used a WebView, started WebApplicationLauncher from AssetRipper.GUI.Web, and attempted to bundle ASP.NET Core managed assemblies from the Linux ARM64 runtime package. That APK was only a packaging experiment. Linux runtime-pack assemblies are not Android runtime assemblies, and a successful publish did not prove that Kestrel could execute on Android.
 
-- Source/AssetRipper.Android, targeting net10.0-android.
-- A MainActivity that creates an Android WebView, starts WebApplicationLauncher, and loads http://127.0.0.1:18555/.
-- A project reference to AssetRipper.GUI.Web.
-- An experimental reference to the Linux ARM64 ASP.NET Core runtime package.
-- SAF import/export code in the Android activity and an Android dialog bridge.
-- CI and release workflows described in the root README and previous Android port notes.
+The current android-port branch has moved beyond that preview:
 
-The current APK is therefore a **WebView-hosted preview**, not a native Android port. A successful APK publish does not prove that Kestrel or ASP.NET Core can execute under the Android runtime. The Linux runtime-pack workaround is not accepted as a production architecture.
+- MainActivity is a native Android Activity with a full-screen native view hierarchy.
+- The Android app no longer references AssetRipper.GUI.Web.
+- The Linux ASP.NET Core runtime-pack workaround and obsolete INTERNET/cleartext manifest settings have been removed.
+- Native SAF file and folder pickers stage input into app-private storage.
+- The app now references the existing AssetRipper.Export.UnityProjects, AssetRipper.Export.PrimaryContent, and AssetRipper.IO.Files projects.
+- AndroidEngineService calls the existing ExportHandler.LoadAndProcess and ExportHandler.Export APIs directly. Primary-content export is also exposed by the adapter.
+- SAF export copies the generated Unity project tree into the user-selected document tree.
+
+This is an implementation milestone, not a verified release. The current branch has not yet been confirmed by a successful Android build or a physical-device run. No claim is made that every transitive engine dependency is Android-compatible.
 
 ## Target architecture
 
-Use .NET for Android (net10.0-android) and Android SDK views/activities directly. Keep the UI full-screen and edge-to-edge, with Android system bars handled intentionally. No WebView dependency in the final application.
-
 ```text
-Android Activity / native Views
-  ├── Home and recent jobs
-  ├── Import source picker (SAF)
-  ├── Extraction configuration
-  ├── Job progress / logs / cancellation
-  ├── Export destination picker (SAF)
-  └── Settings / diagnostics
+Native Android Activity / Views
+  ├── Import file/folder picker (SAF)
+  ├── Source list and operation status
+  ├── Process selected Unity sources
+  └── Export Unity project (SAF destination)
           |
           v
-Android application services
-  ├── SAF URI access + streaming staging
-  ├── durable job state + foreground execution
-  ├── structured logs and error mapping
-  └── Android lifecycle / notifications
+Android platform adapter
+  ├── ContentResolver URI access
+  ├── private staging and streaming copies
+  ├── Android lifecycle and UI dispatch
+  └── error reporting
           |
           v
-AssetRipper engine adapter
-  ├── explicit input/output abstractions
-  ├── progress and cancellation
-  └── existing AssetRipper processing pipeline
+AndroidEngineService
+  ├── FullConfiguration
+  ├── ExportHandler.LoadAndProcess
+  ├── ExportHandler.Export
+  └── PrimaryContentExporter
+          |
+          v
+Existing AssetRipper engine projects
 ```
 
-The engine adapter is a hard integration boundary. It must call a real, supported engine entry point. Do not invent a GameExtractor.Extract API or route calls through MVC controllers merely to make the UI appear connected. Before implementation, identify the existing application orchestration entry point and classify every transitive dependency for Android compatibility.
+The engine entry points were traced from the existing GUI orchestration source. GameFileLoader previously delegated loading and processing to ExportHandler.LoadAndProcess(paths, LocalFileSystem.Instance), and Unity project export to ExportHandler.Export. The Android adapter calls those existing engine APIs directly; it does not route work through MVC controllers or invent a new extraction API.
 
 ## Native screen inventory
 
-| Screen | Native implementation | Acceptance criteria |
+| Screen | Current state | Acceptance criteria |
 |---|---|---|
-| Home | Activity with app bar, import action, recent jobs, storage summary | Native controls; no browser surface; adapts to portrait, landscape, and tablets |
-| Import | SAF document/tree pickers and selected-source summary | Supports file, folder, cancellation, duplicate names, provider errors |
-| Configure | Native form controls for available engine options | Options and defaults come from the engine, not hard-coded guesses |
-| Job | Foreground execution, progress, phase, elapsed time, cancel | UI remains responsive; process recreation restores job state |
-| Results | Output summary, warnings, file counts, open/share/export actions | Counts reflect actual output; failed export is never shown as success |
-| Logs | Filterable structured log list and shareable diagnostic report | Sensitive local paths are redacted from shared diagnostics |
-| Settings | Theme, output behavior, resource limits, diagnostics | Persisted settings; every displayed setting has an implemented effect |
+| Home/import | First native screen implemented | Native controls; no browser surface; portrait/landscape/tablet layout |
+| Source list | Implemented in memory | File/folder names shown; duplicate URI selection prevented |
+| Configure | Not implemented | Options and defaults come from FullConfiguration |
+| Job/progress | Basic status text and engine log callback | Durable foreground job, progress phases, cancellation, process recreation |
+| Results | Not implemented | Actual counts, warnings, output summary |
+| Export | Unity project export flow wired to SAF tree | Provider errors, collision handling, complete output verification |
+| Logs | Engine messages currently feed the status text | Filterable logs and shareable redacted diagnostic report |
+| Settings | Not implemented | Persisted settings with implemented effects |
 
-Use Android native widgets and Material styling where a compatible AndroidX dependency is justified. Preserve accessibility semantics, large touch targets, dynamic font scaling, and localized strings. The first implementation should prioritize a usable end-to-end import → process → export path over decorative dashboards.
+Use native Android widgets. Preserve accessibility semantics, large touch targets, dynamic font scaling, localization, and responsive layouts. Prioritize correctness of import → process → export before decorative dashboards.
 
 ## Engine and runtime compatibility gate
 
-Before wiring extraction into Android:
+The Android project references these existing engine projects:
 
-1. Identify the actual engine orchestration API used by the existing desktop GUI.
-2. Trace its project references and NuGet dependencies.
-3. Separate platform-neutral parsing/serialization from desktop-only UI, ASP.NET Core, filesystem, process, native-library, and OS integration.
-4. Build a minimal Android instrumentation/smoke harness that loads the engine assembly and executes a tiny known-good fixture.
-5. Remove the ASP.NET Core framework reference and Linux runtime-pack workaround from the Android dependency graph only after the engine adapter no longer requires the web host.
-6. Verify ARM64 native dependencies and trimming/AOT behavior independently. Do not assume a Linux native library or runtime pack is Android-compatible.
+- AssetRipper.Export.UnityProjects
+- AssetRipper.Export.PrimaryContent
+- AssetRipper.IO.Files
 
-If a dependency is unsupported on Android, isolate or replace that dependency at the adapter boundary. Do not silently skip processing features.
+Their transitive project and NuGet dependency graph must be validated on Android. In particular:
+
+1. Restore and compile the full Android project from a clean checkout.
+2. Verify that all transitive dependencies load under the Android runtime; a successful compile alone is insufficient.
+3. Run a tiny known-good Unity fixture through LoadAndProcess on an ARM64 device/emulator.
+4. Verify the Unity project exporter and primary-content exporter on the same fixture.
+5. Inventory native libraries, dynamic code generation, reflection, file-system assumptions, and linker/trimming behavior.
+6. Keep ASP.NET Core and the Linux runtime pack out of the Android dependency graph.
+
+If a dependency is unsupported on Android, isolate or replace it at the adapter boundary. Do not silently skip processing features.
 
 ## Storage contract
 
-Use Storage Access Framework content URIs as the user-visible storage contract. Persist granted URI permissions where supported. Stream inputs into app-private staging only when the engine requires seekable filesystem paths; enforce available-space checks and clean up abandoned staging data. Export through a selected tree URI, stream files, preserve directory structure, detect name collisions, and report provider failures. Never request broad storage permissions merely to bypass SAF.
+Use Storage Access Framework content URIs as the user-visible storage contract. Persist granted URI permissions where supported. Inputs are streamed into app-private staging because the existing engine currently consumes filesystem paths. Folder imports recurse through DocumentsContract. Export writes to private staging and copies the directory tree to the selected SAF destination.
+
+Remaining storage work: check free space before staging, bound concurrent copies, handle provider timeouts/disconnections, verify output counts and byte totals, make cleanup robust, and test duplicate names and read/write failures across local and cloud document providers.
 
 ## Background execution and lifecycle
 
-Treat extraction as a durable job, not an Activity-owned task. Persist job identifiers, source references, output configuration, progress checkpoints where possible, and terminal status. Use an Android foreground service for user-initiated long-running extraction with a persistent notification and explicit cancellation. WorkManager may coordinate deferrable work, but must not be presented as a guarantee that a long interactive extraction can run uninterrupted. Reattach the UI to an existing job after rotation or process recreation.
+Current extraction and export are dispatched off the UI thread, but remain Activity-owned tasks. They are not yet durable jobs. Rotation/process recreation, user cancellation, foreground notification, progress persistence, and reliable cleanup are not complete.
+
+The target is a durable user-initiated job with persisted source/output references, progress checkpoints where possible, terminal state, explicit cancellation, and an Android foreground service with a persistent notification. WorkManager may coordinate deferrable work but is not a substitute for an interactive long-running extraction service.
 
 ## Android-only repository scope
 
-The product repository should build and release Android only. Keep upstream reusable engine projects and source files; remove desktop packaging, desktop-only workflows, and desktop instructions only after confirming they are not needed by the engine or upstream merge strategy. Do not delete Windows/Linux/macOS conditionals inside reusable engine code merely to make the repository look Android-only.
+The product repository should build and release Android only. Keep reusable upstream engine projects and source files. Remove desktop packaging, desktop-only workflows, and desktop instructions only after confirming they are not needed by the engine or upstream merge strategy. Do not delete platform conditionals from reusable engine code merely to make the repository look Android-only.
 
-Required repository outcomes:
+Required outcomes:
 
 - One documented Android application entry point.
 - Android-only CI for restore, build, static checks, tests, and APK/AAB packaging.
-- A separate protected release workflow using a maintainer-owned signing key.
-- No release tag until runtime, SAF, and real-device smoke tests pass.
-- README and release notes accurately state supported Android versions, ABI, known limitations, and test evidence.
+- CI runs for both branch pushes and pull requests.
+- A protected release workflow using a maintainer-owned signing key.
+- No release tag until runtime, SAF, and physical-device smoke tests pass.
+- README and release notes match tested behavior.
 
 ## Delivery sequence
 
 ### A. Baseline and dependency map
 - Record branch/head and preserve existing user changes.
-- Inventory solution projects, entry points, GUI routes, dialog contracts, engine dependencies, workflows, and license notices.
-- Establish reproducible baseline build/test results.
-- Deliverable: dependency map and explicit list of reusable engine APIs.
+- Inventory solution projects, engine entry points, GUI routes, workflows, native dependencies, and license notices.
+- Establish reproducible build/test results.
+- Deliverable: dependency map and compatibility report.
 
-### B. Native shell
-- Replace the WebView Activity with a full-screen native Activity and native navigation.
-- Add home, import, job, results, logs, and settings screen skeletons with real navigation.
-- Remove Kestrel startup and WebView permissions/dependencies from the Android app.
-- Deliverable: installable native shell with no embedded browser.
+### B. Native shell — first slice implemented
+- Replace the WebView Activity with a full-screen native Activity.
+- Add native SAF file/folder selection and selected-source display.
+- Remove the web host and Linux ASP.NET runtime-pack workaround.
+- Remaining: navigation, responsive layout, accessibility, and persisted source/job state.
 
-### C. Engine adapter
-- Implement an adapter around the verified existing engine entry point.
-- Keep Android-specific SAF and lifecycle concerns outside the engine.
-- Add fixture-based Android-compatible engine tests.
-- Deliverable: one small Unity fixture imports and processes without ASP.NET Core.
+### C. Direct engine adapter — first slice implemented
+- Reference reusable engine projects directly.
+- Call the existing LoadAndProcess and Export APIs.
+- Remaining: clean Android build, runtime compatibility, known-good fixture verification, settings UI, cancellation, and robust progress reporting.
 
-### D. End-to-end workflow
-- Implement SAF import, options, foreground job execution, progress, cancellation, output staging, and SAF export.
-- Implement robust error mapping, storage checks, and cleanup.
-- Deliverable: complete import → extraction → export workflow on a physical ARM64 device.
+### D. End-to-end storage and job lifecycle
+- Verify SAF import/export with local and cloud providers.
+- Add free-space checks, bounded streaming, collision policy, and cleanup.
+- Implement durable foreground jobs, notifications, progress, cancellation, and process recreation.
 
 ### E. Product quality
-- Implement recent jobs, logs, diagnostics, settings, accessibility, localization, tablet layouts, and performance limits.
+- Add configuration, results, logs, diagnostics, settings, accessibility, localization, tablet layouts, and performance limits.
 - Test large projects and low-memory behavior.
-- Deliverable: repeatable QA report and documented limitations.
 
 ### F. Android-only release
-- Remove obsolete desktop-specific build/release workflows after confirming engine build requirements.
+- Remove obsolete desktop-specific packaging/workflows only after confirming engine build requirements and upstream merge strategy.
 - Build APK and AAB as appropriate; test clean install and upgrade signing.
-- Publish signed pre-releases only after acceptance gates pass.
-- Deliverable: reproducible signed Android release with checksums and release notes.
+- Publish signed pre-releases only after all acceptance gates pass.
 
 ## Definition of done
 
 - No WebView, browser UI, Kestrel, loopback HTTP server, or ASP.NET Core runtime-pack workaround in the shipped app.
 - All primary screens are native Android controls.
-- Real AssetRipper engine processing is invoked through a verified adapter.
-- SAF import and export work with local and supported document providers.
+- Real AssetRipper engine processing is invoked through verified existing APIs.
+- SAF import and export work with supported document providers.
 - Long jobs survive Activity recreation, provide progress, and support cancellation.
 - A known-good Unity fixture completes end-to-end on a physical ARM64 device.
-- CI builds from a clean checkout and runs the relevant tests.
+- CI builds from a clean checkout and runs relevant tests.
 - Release signing is protected and reproducible.
-- README, privacy/storage behavior, supported inputs, and limitations match tested behavior.
+- README, storage behavior, supported inputs, and limitations match tested behavior.
 
-## Current implementation status
+## Current status
 
-This document is the migration contract and backlog baseline. It does not claim that the native UI or engine integration has already been implemented. The current Android Activity remains WebView-based until the native shell change is committed and validated.
+Native UI, SAF source selection/staging, direct engine calls, and SAF export wiring have been committed to the android-port branch. **Build success, engine runtime compatibility, and physical-device behavior remain unverified.** The app is still an engineering preview, not a release.
