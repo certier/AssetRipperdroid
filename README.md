@@ -18,7 +18,7 @@ AssetRipper supports Unity versions from `3.5.0` to `6000.4.X`. However, support
 
 ## Android port (development)
 
-This fork is being converted into an **Android-only, full-screen native application**. The Android app no longer uses the previous WebView/Kestrel host. The native Activity now provides SAF file/folder selection, stages selected input in app-private storage, calls AssetRipper's existing engine APIs directly, and exports a Unity project to a user-selected SAF folder.
+This fork is being converted into an **Android-only, full-screen native application**. The Android app no longer uses the previous WebView/Kestrel host. The native Activity now provides SAF file/folder selection, stages selected input in app-private storage, calls AssetRipper's existing engine APIs directly, and exports a Unity project to a user-selected SAF folder. The root solution and binary publishing workflow have also been narrowed to Android; reusable engine source remains intact.
 
 **Current state:** the native import/process/export path is wired in code, but this revision has not yet been verified by a clean Android CI build or a physical-device run. Transitive engine dependency compatibility and real-world SAF behavior remain unverified. This is an engineering preview, not a supported release. Do not rely on it as the only copy of important data.
 
