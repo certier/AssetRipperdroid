@@ -568,7 +568,10 @@ public sealed class MainActivity : Activity
         button.SetTextColor(Color.ParseColor("#E7EDF7"));
         button.SetAllCaps(false);
         button.TextSize = 15;
-        button.SetBackgroundTintList(ColorStateList.ValueOf(Color.ParseColor("#263750")));
+        GradientDrawable background = new();
+        background.SetColor(Color.ParseColor("#263750"));
+        background.SetCornerRadius(Dp(12));
+        button.Background = background;
         return button;
     }
 
