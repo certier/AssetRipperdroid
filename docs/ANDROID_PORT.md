@@ -1,33 +1,26 @@
-# Android preview: historical implementation and limitations
+# Android preview: historical WebView implementation
 
-> **Superseded direction:** this document describes the earlier WebView-based Android preview. The product requirement is now a full-screen native Android UI with no WebView or embedded web server. Follow [NATIVE_ANDROID_MIGRATION.md](NATIVE_ANDROID_MIGRATION.md) for the active architecture and acceptance criteria.
+> **Superseded:** this file records the first Android experiment. The active architecture is documented in [NATIVE_ANDROID_MIGRATION.md](NATIVE_ANDROID_MIGRATION.md). The product target is a full-screen native Android app with no WebView or embedded web server.
 
 ## Historical implementation
 
-The android-port branch originally added a .NET 10 Android Activity that hosted the existing AssetRipper GUI in a WebView. It started the local web application on loopback and bridged Android's Storage Access Framework (SAF) pickers to the existing desktop-oriented file dialogs.
+The first android-port implementation added a .NET 10 Android Activity that hosted the existing AssetRipper GUI in a WebView. It started the local web application on loopback and bridged Android's Storage Access Framework (SAF) pickers to desktop-oriented file dialogs.
 
-That implementation included:
+That experiment included:
 
-- Source/AssetRipper.Android targeting net10.0-android.
 - A WebView host and loopback server startup.
 - SAF file/folder selection and app-private staging.
 - Export staging and copy to a selected SAF tree.
-- Android build and release workflows.
+- An Android ARM64 APK build and release workflow.
 
-## Important runtime warning
+## Runtime warning
 
-The Android project referenced AssetRipper.GUI.Web and attempted to bundle managed ASP.NET Core assemblies from the Linux ARM64 runtime package. Linux runtime assemblies are not Android runtime assemblies. Successful APK compilation is not evidence that those assemblies load or that Kestrel can run on Android.
+The historical Android project referenced AssetRipper.GUI.Web and attempted to bundle managed ASP.NET Core assemblies from the Linux ARM64 runtime package. Linux runtime assemblies are not Android runtime assemblies. Successful APK compilation was not evidence that those assemblies load or that Kestrel can run on Android.
 
-The old preview has not been validated as a complete on-device product. In particular, do not infer successful runtime startup, engine processing, or end-to-end import/export from an APK build alone.
+The WebView preview was never validated as a complete on-device product. Do not infer successful runtime startup, engine processing, or end-to-end import/export from its APK build.
 
-## Migration status
+## Supersession
 
-The current MainActivity is still the historical WebView implementation until it is replaced by the native shell in a separately validated change. The Android app must not be described as native or production-ready before that replacement and its tests are complete.
+The current android-port branch has replaced that WebView Activity with native Android views, removed the ASP.NET Core runtime-pack experiment, and introduced a direct engine adapter plus SAF import/export wiring. These newer changes still require clean CI and physical-device validation; they are not yet a supported release.
 
-See [NATIVE_ANDROID_MIGRATION.md](NATIVE_ANDROID_MIGRATION.md) for:
-
-- Native screen inventory and navigation target.
-- Engine compatibility gate and adapter boundary.
-- SAF storage contract and long-running job lifecycle.
-- Android-only repository scope.
-- Delivery sequence and definition of done.
+See [NATIVE_ANDROID_MIGRATION.md](NATIVE_ANDROID_MIGRATION.md) for current architecture, implementation status, Android-only repository scope, delivery sequence, and definition of done.
