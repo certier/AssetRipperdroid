@@ -10,7 +10,7 @@ Keep the AssetRipper extraction and serialization engine wherever its dependenci
 
 The previous Android preview used a WebView, started WebApplicationLauncher from AssetRipper.GUI.Web, and attempted to bundle ASP.NET Core managed assemblies from the Linux ARM64 runtime package. That APK was only a packaging experiment. Linux runtime-pack assemblies are not Android runtime assemblies, and a successful publish did not prove that Kestrel could execute on Android.
 
-The current android-port branch has moved beyond that preview:
+The current native-android branch has moved beyond that preview:
 
 - MainActivity is a native Android Activity with a full-screen native view hierarchy.
 - The Android app no longer references AssetRipper.GUI.Web.
@@ -159,4 +159,4 @@ Required outcomes:
 
 ## Current status
 
-Native UI, SAF source selection/staging, direct engine calls, SAF export wiring, an Android-only root solution, and removal of desktop binary publishing have been committed to the android-port branch. **Build success, engine runtime compatibility, and physical-device behavior remain unverified.** The app is still an engineering preview, not a release.
+Native UI, SAF source selection/staging, direct engine calls, SAF export wiring, an Android-only root solution, and removal of desktop binary publishing have been committed to the native-android branch. **Build success, engine runtime compatibility, and physical-device behavior remain unverified.** The app is still an engineering preview, not a release.
