@@ -43,11 +43,14 @@ public sealed class MainActivity : Activity
         Window?.SetFlags(WindowManagerFlags.Fullscreen, WindowManagerFlags.Fullscreen);
         Window?.SetNavigationBarColor(Color.ParseColor("#101827"));
         Window?.SetStatusBarColor(Color.ParseColor("#101827"));
-        Window?.DecorView?.SetSystemUiVisibility(
-            StatusBarVisibility.Fullscreen
-            | StatusBarVisibility.HideNavigation
-            | StatusBarVisibility.ImmersiveSticky
-            | StatusBarVisibility.LayoutStable);
+        if (Window?.DecorView is View decorView)
+        {
+            decorView.SystemUiVisibility =
+                StatusBarVisibility.Fullscreen
+                | StatusBarVisibility.HideNavigation
+                | StatusBarVisibility.ImmersiveSticky
+                | StatusBarVisibility.LayoutStable;
+        }
 
         engine = new AndroidEngineService(FilesDir!.AbsolutePath);
         engine.LogReceived += OnEngineLog;
@@ -319,9 +322,9 @@ public sealed class MainActivity : Activity
                 DateTime.UtcNow.ToString("yyyyMMdd_HHmmss_fff"));
             await engine.ExportUnityProjectAsync(stagingPath);
 
-            Uri rootDocumentUri = DocumentsContract.BuildDocumentUriUsingTree(
-                treeUri,
-                DocumentsContract.GetTreeDocumentId(treeUri))
+            string rootDocumentId = DocumentsContract.GetTreeDocumentId(treeUri)
+                ?? throw new IOException("The selected Android folder has no document identifier.");
+            Uri rootDocumentUri = DocumentsContract.BuildDocumentUriUsingTree(treeUri, rootDocumentId)
                 ?? throw new IOException("The selected Android folder is not accessible.");
 
             await CopyDirectoryToTreeAsync(stagingPath, rootDocumentUri);
