@@ -12,7 +12,6 @@ using Android.Util;
 using Android.Webkit;
 using Color = Android.Graphics.Color;
 using Typeface = Android.Graphics.Typeface;
-using ColorStateList = Android.Content.Res.ColorStateList;
 using Uri = Android.Net.Uri;
 
 namespace AssetRipper.Android;
@@ -554,7 +553,10 @@ public sealed class MainActivity : Activity
         button.SetTextColor(Color.White);
         button.SetAllCaps(false);
         button.TextSize = 15;
-        button.BackgroundTintList = ColorStateList.ValueOf(Color.ParseColor(color));
+        GradientDrawable background = new();
+        background.SetColor(Color.ParseColor(color));
+        background.SetCornerRadius(Dp(12));
+        button.Background = background;
         button.LayoutParameters = new LinearLayout.LayoutParams(
             ViewGroup.LayoutParams.MatchParent, Dp(52));
         return button;
